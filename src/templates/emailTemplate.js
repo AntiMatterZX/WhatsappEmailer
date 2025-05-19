@@ -8,6 +8,7 @@
  * @param {Date} params.timestamp Message timestamp
  * @param {string} params.uniqueId Unique message ID
  * @param {Array} params.attachments Array of attachment file names (optional)
+ * @param {string} params.quotedContent Content of the message being replied to (optional)
  * @returns {string} HTML email content
  */
 function generateEmailTemplate(params) {
@@ -18,7 +19,8 @@ function generateEmailTemplate(params) {
     content,
     timestamp,
     uniqueId,
-    attachments = []
+    attachments = [],
+    quotedContent = null
   } = params;
 
   // Format the time
@@ -44,6 +46,19 @@ function generateEmailTemplate(params) {
         <p style="font-size: 12px; color: #666; margin-top: 10px; font-style: italic;">
           The attachments are included with this email.
         </p>
+      </div>
+    `;
+  }
+
+  // Generate quoted content HTML if this is a reply
+  let quotedContentHtml = '';
+  if (quotedContent) {
+    quotedContentHtml = `
+      <div style="margin-top: 20px; margin-bottom: 20px; padding: 15px; background-color: #f0f0f0; border-radius: 6px; border-left: 4px solid #9e9e9e;">
+        <h3 style="margin-top: 0; color: #616161;">Replying to:</h3>
+        <div style="padding: 10px; background-color: #ffffff; border-radius: 4px; font-style: italic; color: #666;">
+          ${quotedContent}
+        </div>
       </div>
     `;
   }
@@ -89,6 +104,9 @@ function generateEmailTemplate(params) {
                 </tr>
               </tbody>
             </table>
+            
+            <!-- Quoted Content Section (if this is a reply) -->
+            ${quotedContentHtml}
             
             <!-- Message Content -->
             <div style="margin-top: 20px; padding: 15px; background-color: #f9f9f9; border-radius: 6px;">

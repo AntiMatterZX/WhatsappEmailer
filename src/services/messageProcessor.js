@@ -24,6 +24,54 @@ class MessageProcessor {
 
   async processMessage(msg) {
     try {
+      // Check if this is a reply/quoted message
+      let quotedMessageId = null;
+      let quotedMessage = null;
+      
+      // Log message properties to help debug
+      logger.debug(`Processing message with ID: ${msg.id._serialized}, body: "${msg.body.substring(0, 50)}${msg.body.length > 50 ? '...' : ''}"`);
+      logger.debug(`Message properties: hasQuotedMsg=${msg.hasQuotedMsg}, type=${msg._data.type}, fromMe=${msg.fromMe}`);
+      
+      // Check if the message is a reply
+      if (msg.hasQuotedMsg) {
+        try {
+          logger.info(`Detected quoted message in WhatsApp message: ${msg.id._serialized}`);
+          const quotedMsg = await msg.getQuotedMessage();
+          quotedMessageId = quotedMsg.id._serialized;
+          logger.info(`Message is a reply to message ID: ${quotedMessageId}`);
+          
+          // Try to find the quoted message in our database
+          quotedMessage = await Message.findOne({ messageId: quotedMessageId });
+          if (quotedMessage) {
+            logger.info(`Found quoted message in database with ID: ${quotedMessageId}`);
+          } else {
+            logger.warn(`Quoted message with ID ${quotedMessageId} not found in database`);
+          }
+        } catch (quotedError) {
+          logger.warn(`Could not retrieve quoted message: ${quotedError.message}`, quotedError);
+        }
+      } else {
+        // Alternative method to detect quoted message if hasQuotedMsg is not working
+        // Some versions of the library might have the quoted message in _data
+        if (msg._data && msg._data.quotedMsg) {
+          try {
+            logger.info(`Detected quoted message via _data.quotedMsg in message: ${msg.id._serialized}`);
+            const quotedMsgId = msg._data.quotedMsg.id._serialized || msg._data.quotedMsg.id;
+            quotedMessageId = quotedMsgId;
+            
+            // Try to find the quoted message in our database
+            quotedMessage = await Message.findOne({ messageId: quotedMessageId });
+            if (quotedMessage) {
+              logger.info(`Found quoted message in database with ID: ${quotedMessageId}`);
+            } else {
+              logger.warn(`Quoted message with ID ${quotedMessageId} not found in database (from _data.quotedMsg)`);
+            }
+          } catch (quotedError) {
+            logger.warn(`Could not process _data.quotedMsg: ${quotedError.message}`, quotedError);
+          }
+        }
+      }
+      
       // Try to get group information
       let group = await Group.findOne({ groupId: msg.from });
       const schoolNameExtract = extractSchoolName(group ? group.name : msg.from);
@@ -115,6 +163,14 @@ class MessageProcessor {
         content: msg.body,
         type: detectedMessageType,
       };
+      
+      // If this is a reply to a message we've processed before, store the reference
+      if (quotedMessageId) {
+        messagePayload.quotedMessageId = quotedMessageId;
+        messagePayload.metadata = messagePayload.metadata || new Map();
+        messagePayload.metadata.set('quotedMessageId', quotedMessageId);
+      }
+      
       // If we have attachments, and your Message model supports storing some info about them (e.g., filenames)
       // you could add that here. For now, emailAttachments are passed in-memory.
       // if (emailAttachments.length > 0) {
@@ -126,6 +182,11 @@ class MessageProcessor {
       // Attach downloaded media to the message object to be used by sendEmail
       if (emailAttachments.length > 0) {
         message.emailAttachments = emailAttachments;
+      }
+      
+      // If this is a reply, attach the quoted message for email threading
+      if (quotedMessage) {
+        message.quotedMessage = quotedMessage;
       }
 
       // Process each matched rule's actions
@@ -218,9 +279,63 @@ class MessageProcessor {
     // Extract school name from group name format: "SR - School Name - something"
     const schoolNameExtract = extractSchoolName(group.name);
     const schoolName = schoolNameExtract.school || schoolNameExtract; // Handle object or string
-    // Generate a unique message ID to prevent threading
-    const uniqueId = generateUniqueEmailId();
-
+    
+    // Check if this is a reply to another message that was sent as an email
+    let emailSubject = '';
+    let inReplyTo = null;
+    let references = null;
+    
+    // If this message is a reply to another message we've processed
+    if (message.quotedMessageId) {
+      try {
+        // Try to find the quoted message by ID
+        const quotedMessage = await Message.findOne({ messageId: message.quotedMessageId });
+        
+        if (quotedMessage) {
+          logger.info(`Found quoted message for email threading with ID: ${message.quotedMessageId}`);
+          
+          // Store the quoted content in this message's metadata for reference
+          const quotedContent = quotedMessage.content;
+          if (quotedContent) {
+            message.metadata = message.metadata || new Map();
+            message.metadata.set('quotedContent', quotedContent);
+            await message.save();
+          }
+          
+          // Check if the quoted message has an email ID in its metadata
+          if (quotedMessage.metadata && quotedMessage.metadata.get('emailMessageId')) {
+            let originalEmailId = quotedMessage.metadata.get('emailMessageId');
+            logger.info(`Found original email message ID: ${originalEmailId} - will use for threading`);
+            
+            // Ensure the message ID is properly formatted with angle brackets for RFC 2822 compliance
+            if (!originalEmailId.startsWith('<')) {
+              originalEmailId = `<${originalEmailId}>`;
+            }
+            
+            // Use existing subject without the unique ID to maintain thread
+            const baseSubject = quotedMessage.metadata.get('emailSubject') || `${schoolName} - Notification`;
+            // Don't strip the ID from the subject, as some email clients use subject for threading
+            emailSubject = baseSubject;
+            
+            // Set up the email headers for threading
+            inReplyTo = originalEmailId;
+            references = originalEmailId;
+          }
+        } else {
+          logger.warn(`Could not find quoted message with ID ${message.quotedMessageId} in database`);
+        }
+      } catch (error) {
+        logger.warn(`Error retrieving quoted message for email threading: ${error.message}`);
+      }
+    }
+    
+    // If not a reply or we couldn't find the original email, generate a new subject with unique ID
+    if (!emailSubject) {
+      // Generate a unique message ID to prevent threading
+      emailSubject = formatEmailSubject(schoolName, message.type || 'Notification');
+    }
+    
+    // Set up email attachments
     let nodemailerAttachments = [];
     let attachmentFilenames = [];
     
@@ -244,43 +359,69 @@ class MessageProcessor {
       });
     }
 
+    // Get quoted content if this is a reply and we have it in metadata
+    let quotedContent = null;
+    if (message.metadata && message.metadata.get('quotedContent')) {
+      quotedContent = message.metadata.get('quotedContent');
+      logger.info(`Including quoted content in email for message ${message.messageId}`);
+    }
+
     // Generate email HTML using our new template
     const htmlContent = generateEmailTemplate({
       schoolName: schoolName,
       groupName: group.name,
       sender: message.sender,
-      content: message.content || "(No message content)",
-      timestamp: message.createdAt || new Date(),
-      uniqueId: uniqueId,
-      attachments: attachmentFilenames
+      content: message.content,
+      timestamp: message.createdAt,
+      uniqueId: message.messageId, // Use the message ID as a unique identifier
+      attachments: attachmentFilenames,
+      quotedContent: quotedContent
     });
 
+    // Generate a domain for message ID that's consistent
+    const domain = process.env.EMAIL_DOMAIN || 'whatsapp-bot.stemrobo.com';
+    // Generate timestamp to make message ID more unique
+    const timestamp = new Date().getTime();
+    // Create RFC 5322 compliant Message-ID with proper formatting
+    const messageId = `<${timestamp}.${message.messageId.replace(/[^a-zA-Z0-9]/g, '')}@${domain}>`;
+
+    // Set up email options with threading headers if available
     const mailOptions = {
-      from: `"WhatsApp Bot" <${process.env.SMTP_USER}>`,
-      to: process.env.HELPDESK_EMAIL,
-      subject: formatEmailSubject(schoolName, message.type || 'NOTIFICATION'),
-      messageId: `<${uniqueId}@whatsapp-bot.local>`,
-      references: [],
-      inReplyTo: '',
-      headers: {
-        'X-Entity-Ref-ID': uniqueId,
-        'X-School-Name': schoolName,
-        'X-Group-Name': group.name,
-        'X-Message-Type': message.type || 'NOTIFICATION'
+      from: {
+        name: `${schoolName} WhatsApp`,
+        address: process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER
       },
+      to: process.env.HELPDESK_EMAIL,
+      subject: emailSubject,
       html: htmlContent,
-      // Generate plain text version from the HTML content
-      text: `School: ${schoolName}\nGroup: ${group.name}\nSender: ${message.sender}\nMessage: ${message.content || "(No message content)"}\nTime: ${message.createdAt ? new Date(message.createdAt).toLocaleString() : new Date().toLocaleString()}\n\n${attachmentFilenames.length ? `Attachments: ${attachmentFilenames.join(', ')}\n` : ''}`,
-      attachments: nodemailerAttachments
+      attachments: nodemailerAttachments,
+      messageId: messageId,
+      headers: {}
     };
-
-    // Allow config to override recipient if specified
-    if (config && typeof config.get === 'function' && config.get('recipientEmail')) {
-      mailOptions.to = config.get('recipientEmail');
+    
+    // Add threading headers if this is a reply
+    if (inReplyTo) {
+      mailOptions.headers['In-Reply-To'] = inReplyTo;
+      mailOptions.headers['References'] = inReplyTo;
+      logger.info(`Setting threading headers - In-Reply-To: ${inReplyTo}, References: ${inReplyTo}`);
     }
-
-    const info = await transporter.sendMail(mailOptions);
-    logger.info(`Sent email for group '${group.name}' (school: ${schoolName}) to ${mailOptions.to} with subject '${mailOptions.subject}'`);
+    
+    try {
+      // Send the email
+      const info = await transporter.sendMail(mailOptions);
+      logger.info(`Email sent for message: ${message.messageId}, messageId: ${info.messageId}`);
+      
+      // Save the email message ID for future threading
+      message.metadata = message.metadata || new Map();
+      message.metadata.set('emailMessageId', info.messageId || messageId);
+      message.metadata.set('emailSubject', emailSubject);
+      await message.save();
+      
+      return info;
+    } catch (error) {
+      logger.error(`Failed to send email for message ${message.messageId}: ${error.message}`, error);
+      throw error; // Re-throw to let caller handle it
+    }
   }
 
   async callWebhook(config, message, group) {

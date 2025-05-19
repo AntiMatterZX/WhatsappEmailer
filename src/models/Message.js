@@ -37,6 +37,11 @@ const messageSchema = new mongoose.Schema({
     of: String,
     default: {}
   },
+  // Reference to the original message if this is a reply
+  quotedMessageId: {
+    type: String,
+    index: true
+  },
   processedAt: Date,
   createdAt: {
     type: Date,

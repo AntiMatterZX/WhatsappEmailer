@@ -20,9 +20,11 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
-      - MONGODB_URI=mongodb://mongo:27017/whatsapp-bot
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      - MONGODB_URI=mongodb+srv://myliquidata:liquidata@whatsapp-bot.qlrc39l.mongodb.net/?retryWrites=true&w=majority&appName=whatsapp-bot
+      - REDIS_HOST=redis-11829.crce182.ap-south-1-1.ec2.redns.redis-cloud.com
+      - REDIS_PORT=11829
+      - REDIS_PASSWORD=MdJaieVJJ66nBHOVgsuaC6HDx55NYSAZ
+      - REDIS_DB=LiquiData-free-db
       - WHATSAPP_SESSION_PATH=/app/sessions
       - JWT_SECRET=replace_with_secure_token
       - RATE_LIMIT_WINDOW=15

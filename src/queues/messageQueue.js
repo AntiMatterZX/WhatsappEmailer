@@ -124,7 +124,7 @@ function setupEmailWorker(connection) {
         from: `"WhatsApp Bot" <${process.env.SMTP_USER}>`,
         to: data.to || process.env.HELPDESK_EMAIL,
         subject: formatEmailSubject(schoolName, data.subject || 'WhatsApp Notification'),
-        messageId: `<${uniqueId}@whatsapp-bot.local>`,
+        messageId: `<${new Date().getTime()}.${uniqueId.replace(/[^a-zA-Z0-9]/g, '')}@${process.env.EMAIL_DOMAIN || 'whatsapp-bot.stemrobo.com'}>`,
         references: [],
         inReplyTo: '',
         headers: {
