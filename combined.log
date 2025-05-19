@@ -776,3 +776,19 @@
 {"level":"info","message":"Redis CONFIG SET not supported, but warnings have been suppressed","service":"whatsapp-bot","timestamp":"2025-05-19 13:59:06"}
 {"level":"info","message":"Connected to MongoDB","service":"whatsapp-bot","timestamp":"2025-05-19 13:59:07"}
 {"level":"error","message":"Failed to initialize WhatsApp client: Protocol error (Runtime.callFunctionOn): Execution context was destroyed.","name":"ProtocolError","originalMessage":"Execution context was destroyed.","service":"whatsapp-bot","stack":"ProtocolError: Protocol error (Runtime.callFunctionOn): Execution context was destroyed.\n    at C:\\whatsapp_bot\\node_modules\\whatsapp-web.js\\node_modules\\puppeteer-core\\lib\\cjs\\puppeteer\\common\\Connection.js:329:24\n    at new Promise (<anonymous>)\n    at CDPSessionImpl.send (C:\\whatsapp_bot\\node_modules\\whatsapp-web.js\\node_modules\\puppeteer-core\\lib\\cjs\\puppeteer\\common\\Connection.js:325:16)\n    at ExecutionContext._ExecutionContext_evaluate (C:\\whatsapp_bot\\node_modules\\whatsapp-web.js\\node_modules\\puppeteer-core\\lib\\cjs\\puppeteer\\common\\ExecutionContext.js:211:46)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async ExecutionContext.evaluate (C:\\whatsapp_bot\\node_modules\\whatsapp-web.js\\node_modules\\puppeteer-core\\lib\\cjs\\puppeteer\\common\\ExecutionContext.js:107:16)","timestamp":"2025-05-19 13:59:10"}
+{"level":"info","message":"BullMQ message queue initialized","service":"whatsapp-bot","timestamp":"2025-05-19 14:05:39"}
+{"level":"info","message":"EMAIL worker is being created and listening for EMAIL jobs","service":"whatsapp-bot","timestamp":"2025-05-19 14:05:39"}
+{"level":"info","message":"WhatsApp Bot server started on port 3000","service":"whatsapp-bot","timestamp":"2025-05-19 14:05:39"}
+{"level":"info","message":"⚡ WhatsApp Bot API is ready (development mode)  - PORT: 3000","service":"whatsapp-bot","timestamp":"2025-05-19 14:05:39"}
+{"level":"info","message":"Redis connected successfully","service":"whatsapp-bot","timestamp":"2025-05-19 14:05:39"}
+{"level":"info","message":"Redis CONFIG SET not supported, but warnings have been suppressed","service":"whatsapp-bot","timestamp":"2025-05-19 14:05:39"}
+{"level":"info","message":"Connected to MongoDB","service":"whatsapp-bot","timestamp":"2025-05-19 14:05:39"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-19 14:05:43"}
+{"level":"info","message":"WhatsApp client authenticated","service":"whatsapp-bot","timestamp":"2025-05-19 14:06:11"}
+{"level":"info","message":"WhatsApp client is ready!","service":"whatsapp-bot","timestamp":"2025-05-19 14:06:12"}
+{"level":"info","message":"Matched rule(s) [HELPDESK] for group 'Test' (school: [object Object]) on message: '[Helpdesk] Yo' from 919004630539@c.us","service":"whatsapp-bot","timestamp":"2025-05-19 14:06:23"}
+{"level":"info","message":"Sending email for group 'Test' (school: [object Object]) to varunbhole2@gmail.com for message: '[Helpdesk] Yo'","service":"whatsapp-bot","timestamp":"2025-05-19 14:06:23"}
+{"level":"info","message":"Sent email for group 'Test' (school: Test) to varunbhole2@gmail.com with subject 'Test - HELPDESK #1747643784979-3242'","service":"whatsapp-bot","timestamp":"2025-05-19 14:06:24"}
+{"level":"info","message":"Matched rule(s) [HELPDESK] for group 'Test' (school: [object Object]) on message: '[Helpdesk] Yo' from 919004630539@c.us","service":"whatsapp-bot","timestamp":"2025-05-19 14:06:56"}
+{"level":"info","message":"Sending email for group 'Test' (school: [object Object]) to varunbhole2@gmail.com for message: '[Helpdesk] Yo'","service":"whatsapp-bot","timestamp":"2025-05-19 14:06:56"}
+{"level":"info","message":"Sent email for group 'Test' (school: Test) to varunbhole2@gmail.com with subject 'Test - HELPDESK #1747643817528-2442'","service":"whatsapp-bot","timestamp":"2025-05-19 14:06:57"}
