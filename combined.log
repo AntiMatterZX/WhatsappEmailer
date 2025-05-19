@@ -792,3 +792,9 @@
 {"level":"info","message":"Matched rule(s) [HELPDESK] for group 'Test' (school: [object Object]) on message: '[Helpdesk] Yo' from 919004630539@c.us","service":"whatsapp-bot","timestamp":"2025-05-19 14:06:56"}
 {"level":"info","message":"Sending email for group 'Test' (school: [object Object]) to varunbhole2@gmail.com for message: '[Helpdesk] Yo'","service":"whatsapp-bot","timestamp":"2025-05-19 14:06:56"}
 {"level":"info","message":"Sent email for group 'Test' (school: Test) to varunbhole2@gmail.com with subject 'Test - HELPDESK #1747643817528-2442'","service":"whatsapp-bot","timestamp":"2025-05-19 14:06:57"}
+{"level":"info","message":"Matched rule(s) [HELPDESK] for group 'Test' (school: [object Object]) on message: '[Helpdesk] Yo' from 919004630539@c.us","service":"whatsapp-bot","timestamp":"2025-05-19 14:22:47"}
+{"level":"info","message":"Sending email for group 'Test' (school: [object Object]) to varunbhole2@gmail.com for message: '[Helpdesk] Yo'","service":"whatsapp-bot","timestamp":"2025-05-19 14:22:47"}
+{"level":"info","message":"Sent email for group 'Test' (school: Test) to varunbhole2@gmail.com with subject 'Test - HELPDESK #1747644769268-2693'","service":"whatsapp-bot","timestamp":"2025-05-19 14:22:49"}
+{"level":"info","message":"Matched rule(s) [HELPDESK] for group 'Test' (school: [object Object]) on message: '[Helpdesk] Yo' from 919004630539@c.us","service":"whatsapp-bot","timestamp":"2025-05-19 14:23:11"}
+{"level":"info","message":"Sending email for group 'Test' (school: [object Object]) to varunbhole2@gmail.com for message: '[Helpdesk] Yo'","service":"whatsapp-bot","timestamp":"2025-05-19 14:23:11"}
+{"level":"info","message":"Sent email for group 'Test' (school: Test) to varunbhole2@gmail.com with subject 'Test - HELPDESK #1747644792819-8636'","service":"whatsapp-bot","timestamp":"2025-05-19 14:23:12"}
