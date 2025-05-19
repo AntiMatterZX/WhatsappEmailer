@@ -1,0 +1,32 @@
+<%- contentFor('body') %>
+
+<div class="container text-center py-5" data-is-logged-in="<%= typeof user !== 'undefined' %>">
+  <div class="mb-5">
+    <img src="https://elasticbeanstalk-ap-south-1-954976323838.s3.ap-south-1.amazonaws.com/varun/stemrobo-final1+(1).png" alt="Logo" style="max-width: 250px;">
+    <h1 class="display-4 mt-4">WhatsApp Bot Admin</h1>
+    <p class="lead">Monitor and manage your WhatsApp groups with powerful automation</p>
+  </div>
+  
+  <div class="d-flex justify-content-center gap-3">
+    <a href="/login" class="btn btn-primary btn-lg">
+      <i class="bi bi-box-arrow-in-right me-2"></i>Login
+    </a>
+    <a href="/dashboard" class="btn btn-outline-primary btn-lg">
+      <i class="bi bi-speedometer2 me-2"></i>Dashboard
+    </a>
+  </div>
+</div>
+
+<script>
+  // Auto-redirect after 3 seconds
+  setTimeout(function() {
+    var container = document.querySelector('.container');
+    var isLoggedIn = container.dataset.isLoggedIn === 'true';
+    
+    if (isLoggedIn) {
+      window.location.href = '/dashboard';
+    } else {
+      window.location.href = '/login';
+    }
+  }, 3000);
+</script> 

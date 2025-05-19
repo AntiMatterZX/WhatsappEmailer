@@ -1,14 +1,25 @@
+/**
+ * Message Queue module for handling asynchronous processing of WhatsApp messages
+ * Uses BullMQ for reliable message processing with Redis as the backend
+ */
 const { Queue, Worker } = require('bullmq');
 const nodemailer = require('nodemailer');
 const logger = require('../utils/logger');
 const { extractSchoolName, generateUniqueEmailId, formatEmailSubject } = require('../utils/helpers');
 const { createRedisConnection } = require('../utils/redisConfig');
 
+/**
+ * Sets up the message queue system with BullMQ and Redis
+ * Creates workers for different message types (helpdesk, urgent, email)
+ * Falls back to in-memory queue if Redis connection fails
+ * 
+ * @returns {Object} - Message queue instance
+ */
 function setupMessageQueue() {
   try {
     const connection = createRedisConnection();
 
-    // Create BullMQ Queue
+    // Create BullMQ Queue with default job options
     const messageQueue = new Queue('messages', {
       connection,
       defaultJobOptions: {
@@ -24,7 +35,7 @@ function setupMessageQueue() {
 
     logger.info('BullMQ message queue initialized');
 
-    // Set up workers
+    // Set up workers for different message types
     setupHelpdeskWorker(connection);
     setupUrgentWorker(connection);
     setupEmailWorker(connection);
@@ -39,6 +50,13 @@ function setupMessageQueue() {
   }
 }
 
+/**
+ * Sets up a worker to process HELPDESK type messages
+ * These are typically support requests that need to be forwarded to appropriate staff
+ * 
+ * @param {Object} connection - Redis connection
+ * @returns {Object} - Worker instance
+ */
 function setupHelpdeskWorker(connection) {
   const worker = new Worker('messages', async (job) => {
     if (job.name !== 'HELPDESK') return;
@@ -66,6 +84,13 @@ function setupHelpdeskWorker(connection) {
   return worker;
 }
 
+/**
+ * Sets up a worker to process URGENT type messages
+ * These have higher concurrency to ensure faster processing
+ * 
+ * @param {Object} connection - Redis connection
+ * @returns {Object} - Worker instance
+ */
 function setupUrgentWorker(connection) {
   const worker = new Worker('messages', async (job) => {
     if (job.name !== 'URGENT') return;
@@ -93,6 +118,13 @@ function setupUrgentWorker(connection) {
   return worker;
 }
 
+/**
+ * Sets up a worker to process EMAIL jobs
+ * Handles sending emails with proper formatting and RFC-compliant headers
+ * 
+ * @param {Object} connection - Redis connection
+ * @returns {Object} - Worker instance
+ */
 function setupEmailWorker(connection) {
   logger.info('EMAIL worker is being created and listening for EMAIL jobs');
   const worker = new Worker('messages', async (job) => {
@@ -119,7 +151,7 @@ function setupEmailWorker(connection) {
       });
       await transporter.verify();
 
-      // Send email
+      // Send email with RFC 5322 compliant Message-ID header
       const info = await transporter.sendMail({
         from: `"WhatsApp Bot" <${process.env.SMTP_USER}>`,
         to: data.to || process.env.HELPDESK_EMAIL,
@@ -159,7 +191,10 @@ function setupEmailWorker(connection) {
   return worker;
 }
 
-// Simple in-memory queue implementation as fallback
+/**
+ * SimpleQueue - In-memory fallback queue when Redis is unavailable
+ * Provides a compatible API with the BullMQ queue for seamless fallback
+ */
 class SimpleQueue {
   constructor() {
     this.queue = [];
@@ -167,6 +202,13 @@ class SimpleQueue {
     logger.warn('Using SimpleQueue fallback - Redis connection not available');
   }
 
+  /**
+   * Add a new job to the queue
+   * 
+   * @param {string} type - Job type (HELPDESK, URGENT, EMAIL)
+   * @param {Object} data - Job data
+   * @returns {Object} - Job object with ID
+   */
   async add(type, data) {
     this.queue.push({ type, data });
     logger.info(`Added message to queue: ${type}`);
@@ -176,6 +218,9 @@ class SimpleQueue {
     return { id: Date.now() };
   }
 
+  /**
+   * Process all jobs in the queue
+   */
   async process() {
     this.processing = true;
     while (this.queue.length > 0) {
@@ -202,35 +247,67 @@ class SimpleQueue {
     this.processing = false;
   }
 
+  /**
+   * Get active jobs (compatibility method)
+   * @returns {Array} - Empty array in simple implementation
+   */
   async getActive() {
     return [];
   }
 
+  /**
+   * Get waiting jobs
+   * @returns {Array} - Array of jobs in the queue
+   */
   async getWaiting() {
     return this.queue;
   }
 
+  /**
+   * Get completed jobs (compatibility method)
+   * @returns {Array} - Empty array in simple implementation
+   */
   async getCompleted() {
     return [];
   }
 
+  /**
+   * Get failed jobs (compatibility method)
+   * @returns {Array} - Empty array in simple implementation
+   */
   async getFailed() {
     return [];
   }
 
+  /**
+   * Clean the queue
+   * @returns {boolean} - Success indicator
+   */
   async clean() {
     this.queue = [];
     return true;
   }
 
+  /**
+   * Process a helpdesk message
+   * @param {Object} data - Message data
+   */
   async processHelpdeskMessage(data) {
     logger.info('Processing helpdesk message:', data);
   }
 
+  /**
+   * Process an urgent message
+   * @param {Object} data - Message data
+   */
   async processUrgentMessage(data) {
     logger.info('Processing urgent message:', data);
   }
 
+  /**
+   * Process an email message
+   * @param {Object} data - Message data
+   */
   async processEmailMessage(data) {
     logger.info('Processing email message:', data);
   }

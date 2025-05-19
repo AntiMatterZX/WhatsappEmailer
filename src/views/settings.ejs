@@ -1,0 +1,601 @@
+<%- contentFor('body') %>
+
+<div class="mb-4">
+  <div class="d-flex justify-content-between align-items-center">
+    <h1 class="mb-0">Settings</h1>
+    <div>
+      <button id="refreshEnv" class="btn-dark-outline me-2">
+        <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+      </button>
+      <button id="resetEnv" class="btn-dark-outline me-2 text-warning">
+        <i class="bi bi-arrow-counterclockwise me-1"></i>Reset to Default
+      </button>
+    </div>
+  </div>
+  <p class="text-secondary mt-2">Manage system configuration and environment variables</p>
+</div>
+
+<!-- Environment Variables Section -->
+<div class="card-dark mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <div class="d-flex align-items-center">
+      <i class="bi bi-gear me-2"></i>
+      <span>Environment Variables</span>
+    </div>
+    <div class="d-flex align-items-center">
+      <div class="input-group me-3" style="width: 250px;">
+        <span class="input-group-text bg-dark border-secondary text-white">
+          <i class="bi bi-search"></i>
+        </span>
+        <input type="text" id="envSearch" class="form-control bg-dark text-white border-secondary" placeholder="Filter variables...">
+      </div>
+      <button id="addEnvBtn" class="btn-dark-primary">
+        <i class="bi bi-plus-lg me-1"></i>Add Variable
+      </button>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <div class="p-3">
+      <div class="alert alert-secondary bg-dark border-secondary text-light mb-3" role="alert">
+        <i class="bi bi-info-circle-fill me-2"></i>
+        Changes to environment variables require a server restart to take effect.
+      </div>
+      
+      <div id="loadingEnv" class="text-center py-5">
+        <div class="spinner-border text-light" role="status">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="mt-2 text-secondary">Loading environment variables...</p>
+      </div>
+      
+      <div id="envTableContainer" class="d-none">
+        <table class="table table-dark table-hover mb-0">
+          <thead>
+            <tr>
+              <th style="width: 30%;">Variable</th>
+              <th style="width: 50%;">Value</th>
+              <th style="width: 20%;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="envTableBody">
+            <!-- Environment variables will be loaded here -->
+          </tbody>
+        </table>
+      </div>
+      
+      <div id="noEnvVars" class="d-none text-center py-5">
+        <i class="bi bi-exclamation-circle text-secondary" style="font-size: 2rem;"></i>
+        <p class="mt-2 text-secondary">No environment variables found.</p>
+        <button id="setupEnvBtn" class="btn-dark-primary mt-2">
+          <i class="bi bi-plus-lg me-1"></i>Set Up Environment Variables
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Save Changes Button -->
+<div class="text-end mb-5">
+  <button id="saveEnvChanges" class="btn-dark-primary btn-lg">
+    <i class="bi bi-save me-2"></i>Save Changes
+  </button>
+</div>
+
+<!-- Add/Edit Variable Modal -->
+<div class="modal fade" id="envVarModal" tabindex="-1" aria-labelledby="envVarModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content bg-dark text-white border-secondary">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title" id="envVarModalLabel">Add Environment Variable</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="envVarForm">
+          <input type="hidden" id="envVarAction" value="add">
+          <div class="mb-3">
+            <label for="envVarName" class="form-label">Variable Name</label>
+            <input type="text" class="form-control bg-dark text-white border-secondary" id="envVarName" required>
+            <div class="form-text text-secondary">Environment variable names are typically uppercase with underscores.</div>
+          </div>
+          <div class="mb-3">
+            <label for="envVarValue" class="form-label">Value</label>
+            <input type="text" class="form-control bg-dark text-white border-secondary" id="envVarValue" required>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer border-secondary">
+        <button type="button" class="btn-dark-outline" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn-dark-primary" id="saveEnvVarBtn">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteEnvVarModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content bg-dark text-white border-secondary">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title">Delete Environment Variable</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to delete the environment variable <strong id="deleteEnvVarName"></strong>?</p>
+        <p class="text-danger">This action cannot be undone.</p>
+      </div>
+      <div class="modal-footer border-secondary">
+        <button type="button" class="btn-dark-outline" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteEnvVarBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Reset Confirmation Modal -->
+<div class="modal fade" id="resetEnvModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content bg-dark text-white border-secondary">
+      <div class="modal-header border-secondary">
+        <h5 class="modal-title">Reset Environment Variables</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Are you sure you want to reset all environment variables to default values?</p>
+        <p class="text-danger">This will overwrite all current environment variables.</p>
+      </div>
+      <div class="modal-footer border-secondary">
+        <button type="button" class="btn-dark-outline" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-warning" id="confirmResetEnvBtn">Reset to Default</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Bootstrap modals
+    const envVarModal = new bootstrap.Modal(document.getElementById('envVarModal'));
+    const deleteEnvVarModal = new bootstrap.Modal(document.getElementById('deleteEnvVarModal'));
+    const resetEnvModal = new bootstrap.Modal(document.getElementById('resetEnvModal'));
+    
+    // Get DOM elements
+    const envTableBody = document.getElementById('envTableBody');
+    const envTableContainer = document.getElementById('envTableContainer');
+    const loadingEnv = document.getElementById('loadingEnv');
+    const noEnvVars = document.getElementById('noEnvVars');
+    const envSearch = document.getElementById('envSearch');
+    
+    // Track environment variables and changes
+    let environmentVariables = {};
+    let originalEnvVars = {};
+    let variableToDelete = null;
+    
+    // Initialize the page
+    loadEnvironmentVariables();
+    
+    // Setup event listeners
+    document.getElementById('refreshEnv').addEventListener('click', loadEnvironmentVariables);
+    document.getElementById('resetEnv').addEventListener('click', () => resetEnvModal.show());
+    document.getElementById('addEnvBtn').addEventListener('click', showAddEnvVarModal);
+    document.getElementById('setupEnvBtn').addEventListener('click', setupDefaultEnvironment);
+    document.getElementById('saveEnvChanges').addEventListener('click', saveEnvironmentVariables);
+    document.getElementById('saveEnvVarBtn').addEventListener('click', saveEnvVar);
+    document.getElementById('confirmDeleteEnvVarBtn').addEventListener('click', deleteEnvVar);
+    document.getElementById('confirmResetEnvBtn').addEventListener('click', resetToDefaults);
+    
+    envSearch.addEventListener('input', filterEnvironmentVariables);
+    
+    // Load environment variables from the server
+    async function loadEnvironmentVariables() {
+      showLoading();
+      
+      try {
+        const response = await fetch('/api/settings/env');
+        const data = await response.json();
+        
+        if (data.success) {
+          environmentVariables = data.env || {};
+          originalEnvVars = { ...environmentVariables };
+          
+          if (Object.keys(environmentVariables).length === 0) {
+            showNoEnvVars();
+          } else {
+            renderEnvironmentVariables();
+            showEnvTable();
+          }
+        } else {
+          showError(data.error || 'Failed to load environment variables');
+        }
+      } catch (error) {
+        console.error('Error loading environment variables:', error);
+        showError('Error loading environment variables. Please try again.');
+      }
+    }
+    
+    // Render environment variables in the table
+    function renderEnvironmentVariables() {
+      envTableBody.innerHTML = '';
+      
+      const searchTerm = envSearch.value.toLowerCase();
+      const sortedVars = Object.keys(environmentVariables).sort();
+      
+      for (const key of sortedVars) {
+        // Filter by search term if provided
+        if (searchTerm && !key.toLowerCase().includes(searchTerm) && 
+            !environmentVariables[key].toLowerCase().includes(searchTerm)) {
+          continue;
+        }
+        
+        const row = document.createElement('tr');
+        
+        // Variable name cell
+        const nameCell = document.createElement('td');
+        nameCell.className = 'var-name';
+        nameCell.textContent = key;
+        row.appendChild(nameCell);
+        
+        // Value cell with masking for sensitive data
+        const valueCell = document.createElement('td');
+        const valueInput = document.createElement('input');
+        valueInput.type = 'text';
+        valueInput.className = 'form-control bg-dark text-white border-secondary';
+        
+        // Check if the value should be masked (password-like fields)
+        const isSensitive = key.toLowerCase().includes('password') || 
+                          key.toLowerCase().includes('secret') || 
+                          key.toLowerCase().includes('key') ||
+                          key.toLowerCase().includes('token');
+        
+        valueInput.value = environmentVariables[key];
+        valueInput.dataset.key = key;
+        
+        if (isSensitive) {
+          valueInput.type = 'password';
+          const toggleBtn = document.createElement('button');
+          toggleBtn.className = 'btn btn-sm btn-dark position-absolute end-0 top-0 m-1';
+          toggleBtn.innerHTML = '<i class="bi bi-eye"></i>';
+          toggleBtn.addEventListener('click', () => {
+            if (valueInput.type === 'password') {
+              valueInput.type = 'text';
+              toggleBtn.innerHTML = '<i class="bi bi-eye-slash"></i>';
+            } else {
+              valueInput.type = 'password';
+              toggleBtn.innerHTML = '<i class="bi bi-eye"></i>';
+            }
+          });
+          
+          const inputGroup = document.createElement('div');
+          inputGroup.className = 'position-relative';
+          inputGroup.appendChild(valueInput);
+          inputGroup.appendChild(toggleBtn);
+          valueCell.appendChild(inputGroup);
+        } else {
+          valueCell.appendChild(valueInput);
+        }
+        
+        valueInput.addEventListener('change', (e) => {
+          environmentVariables[key] = e.target.value;
+        });
+        
+        row.appendChild(valueCell);
+        
+        // Actions cell with edit and delete buttons
+        const actionsCell = document.createElement('td');
+        actionsCell.className = 'text-end';
+        
+        const editBtn = document.createElement('button');
+        editBtn.className = 'btn-dark-outline btn-sm me-2';
+        editBtn.innerHTML = '<i class="bi bi-pencil"></i>';
+        editBtn.addEventListener('click', () => showEditEnvVarModal(key));
+        
+        const deleteBtn = document.createElement('button');
+        deleteBtn.className = 'btn-dark-outline btn-sm text-danger';
+        deleteBtn.innerHTML = '<i class="bi bi-trash"></i>';
+        deleteBtn.addEventListener('click', () => showDeleteEnvVarModal(key));
+        
+        actionsCell.appendChild(editBtn);
+        actionsCell.appendChild(deleteBtn);
+        row.appendChild(actionsCell);
+        
+        envTableBody.appendChild(row);
+      }
+      
+      // If no results after filtering
+      if (envTableBody.children.length === 0) {
+        const emptyRow = document.createElement('tr');
+        const emptyCell = document.createElement('td');
+        emptyCell.colSpan = 3;
+        emptyCell.className = 'text-center py-3 text-secondary';
+        emptyCell.textContent = searchTerm ? 'No matching variables found.' : 'No environment variables defined.';
+        emptyRow.appendChild(emptyCell);
+        envTableBody.appendChild(emptyRow);
+      }
+    }
+    
+    // Filter environment variables based on search input
+    function filterEnvironmentVariables() {
+      renderEnvironmentVariables();
+    }
+    
+    // Show the add variable modal
+    function showAddEnvVarModal() {
+      document.getElementById('envVarModalLabel').textContent = 'Add Environment Variable';
+      document.getElementById('envVarAction').value = 'add';
+      document.getElementById('envVarName').value = '';
+      document.getElementById('envVarName').disabled = false;
+      document.getElementById('envVarValue').value = '';
+      envVarModal.show();
+    }
+    
+    // Show the edit variable modal
+    function showEditEnvVarModal(key) {
+      document.getElementById('envVarModalLabel').textContent = 'Edit Environment Variable';
+      document.getElementById('envVarAction').value = 'edit';
+      document.getElementById('envVarName').value = key;
+      document.getElementById('envVarName').disabled = true;
+      document.getElementById('envVarValue').value = environmentVariables[key];
+      envVarModal.show();
+    }
+    
+    // Show the delete confirmation modal
+    function showDeleteEnvVarModal(key) {
+      variableToDelete = key;
+      document.getElementById('deleteEnvVarName').textContent = key;
+      deleteEnvVarModal.show();
+    }
+    
+    // Save a new or edited environment variable
+    function saveEnvVar() {
+      const action = document.getElementById('envVarAction').value;
+      const name = document.getElementById('envVarName').value.trim();
+      const value = document.getElementById('envVarValue').value;
+      
+      if (!name) {
+        alert('Please enter a variable name.');
+        return;
+      }
+      
+      if (action === 'add' && environmentVariables.hasOwnProperty(name)) {
+        alert('A variable with this name already exists. Please choose another name or edit the existing variable.');
+        return;
+      }
+      
+      environmentVariables[name] = value;
+      envVarModal.hide();
+      renderEnvironmentVariables();
+    }
+    
+    // Delete an environment variable
+    function deleteEnvVar() {
+      if (variableToDelete && environmentVariables.hasOwnProperty(variableToDelete)) {
+        delete environmentVariables[variableToDelete];
+        deleteEnvVarModal.hide();
+        renderEnvironmentVariables();
+        variableToDelete = null;
+      }
+    }
+    
+    // Set up default environment variables
+    async function setupDefaultEnvironment() {
+      showLoading();
+      
+      try {
+        const response = await fetch('/api/settings/env/setup', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          environmentVariables = data.env || {};
+          originalEnvVars = { ...environmentVariables };
+          showSuccess('Default environment variables set up successfully.');
+          renderEnvironmentVariables();
+          showEnvTable();
+        } else {
+          showError(data.error || 'Failed to set up default environment variables');
+        }
+      } catch (error) {
+        console.error('Error setting up environment variables:', error);
+        showError('Error setting up environment variables. Please try again.');
+      }
+    }
+    
+    // Reset to default environment variables
+    async function resetToDefaults() {
+      showLoading();
+      
+      try {
+        const response = await fetch('/api/settings/env/reset', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          environmentVariables = data.env || {};
+          originalEnvVars = { ...environmentVariables };
+          resetEnvModal.hide();
+          showSuccess('Environment variables reset to defaults successfully.');
+          renderEnvironmentVariables();
+          showEnvTable();
+        } else {
+          resetEnvModal.hide();
+          showError(data.error || 'Failed to reset environment variables');
+        }
+      } catch (error) {
+        console.error('Error resetting environment variables:', error);
+        resetEnvModal.hide();
+        showError('Error resetting environment variables. Please try again.');
+      }
+    }
+    
+    // Save environment variables to the server
+    async function saveEnvironmentVariables() {
+      // Check if there are any changes
+      if (JSON.stringify(environmentVariables) === JSON.stringify(originalEnvVars)) {
+        showInfo('No changes to save.');
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/settings/env', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ env: environmentVariables })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          originalEnvVars = { ...environmentVariables };
+          showSuccess('Environment variables saved successfully. Restart the server for changes to take effect.');
+        } else {
+          showError(data.error || 'Failed to save environment variables');
+        }
+      } catch (error) {
+        console.error('Error saving environment variables:', error);
+        showError('Error saving environment variables. Please try again.');
+      }
+    }
+    
+    // UI Helper functions
+    function showLoading() {
+      loadingEnv.classList.remove('d-none');
+      envTableContainer.classList.add('d-none');
+      noEnvVars.classList.add('d-none');
+    }
+    
+    function showEnvTable() {
+      loadingEnv.classList.add('d-none');
+      envTableContainer.classList.remove('d-none');
+      noEnvVars.classList.add('d-none');
+    }
+    
+    function showNoEnvVars() {
+      loadingEnv.classList.add('d-none');
+      envTableContainer.classList.add('d-none');
+      noEnvVars.classList.remove('d-none');
+    }
+    
+    function showSuccess(message) {
+      // Create a floating alert
+      const alert = document.createElement('div');
+      alert.className = 'alert alert-success alert-dismissible fade show position-fixed top-0 end-0 m-3';
+      alert.style.zIndex = 2000;
+      alert.innerHTML = `
+        <i class="bi bi-check-circle-fill me-2"></i>${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      `;
+      document.body.appendChild(alert);
+      
+      // Remove after 5 seconds
+      setTimeout(() => {
+        alert.classList.remove('show');
+        setTimeout(() => alert.remove(), 150);
+      }, 5000);
+    }
+    
+    function showError(message) {
+      // Create a floating alert
+      const alert = document.createElement('div');
+      alert.className = 'alert alert-danger alert-dismissible fade show position-fixed top-0 end-0 m-3';
+      alert.style.zIndex = 2000;
+      alert.innerHTML = `
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      `;
+      document.body.appendChild(alert);
+      
+      // Remove after 5 seconds
+      setTimeout(() => {
+        alert.classList.remove('show');
+        setTimeout(() => alert.remove(), 150);
+      }, 5000);
+    }
+    
+    function showInfo(message) {
+      // Create a floating alert
+      const alert = document.createElement('div');
+      alert.className = 'alert alert-info alert-dismissible fade show position-fixed top-0 end-0 m-3';
+      alert.style.zIndex = 2000;
+      alert.innerHTML = `
+        <i class="bi bi-info-circle-fill me-2"></i>${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      `;
+      document.body.appendChild(alert);
+      
+      // Remove after 3 seconds
+      setTimeout(() => {
+        alert.classList.remove('show');
+        setTimeout(() => alert.remove(), 150);
+      }, 3000);
+    }
+  });
+</script>
+
+<style>
+  .btn-dark-primary {
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .btn-dark-primary:hover {
+    background-color: #2563eb;
+  }
+  
+  .btn-dark-outline {
+    background-color: transparent;
+    color: #e5e7eb;
+    border: 1px solid #4b5563;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .btn-dark-outline:hover {
+    background-color: rgba(75, 85, 99, 0.2);
+    color: white;
+  }
+  
+  .btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+  }
+  
+  .var-name {
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-weight: 600;
+  }
+  
+  .table-dark {
+    background-color: #111;
+    color: #e5e7eb;
+  }
+  
+  .table-dark th {
+    border-bottom: 1px solid #374151;
+    font-weight: 600;
+    color: #9ca3af;
+  }
+  
+  .table-dark td {
+    border-bottom: 1px solid #1f2937;
+  }
+</style> 

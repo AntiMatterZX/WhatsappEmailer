@@ -1,0 +1,40 @@
+<%- contentFor('body') %>
+
+<div class="login-container">
+  <div class="text-center mb-4">
+    <img src="https://elasticbeanstalk-ap-south-1-954976323838.s3.ap-south-1.amazonaws.com/varun/stemrobo-final1+(1).png" alt="Logo" class="login-logo">
+    <h2 class="login-title">WhatsApp Bot Admin</h2>
+  </div>
+  
+  <div class="card login-card">
+    <div class="card-body">
+      <form action="/login" method="POST">
+        <div class="form-floating">
+          <input type="text" class="form-control" id="username" name="username" placeholder="Username" required>
+          <label for="username">Username</label>
+        </div>
+        
+        <div class="form-floating">
+          <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
+          <label for="password">Password</label>
+        </div>
+        
+        <div class="d-grid gap-2 mt-4">
+          <button type="submit" class="btn btn-primary btn-lg">
+            <i class="bi bi-box-arrow-in-right me-2"></i>Login
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <div class="text-center mt-4 text-muted">
+    <small>Secure access to WhatsApp Bot management system</small>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('username').focus();
+  });
+</script> 

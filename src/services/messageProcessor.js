@@ -1,3 +1,7 @@
+/**
+ * Main module for processing WhatsApp messages and handling various actions like email, webhooks, etc.
+ * This service is the core handler for all incoming messages from WhatsApp.
+ */
 const nodemailer = require('nodemailer');
 const Message = require('../models/Message');
 const Group = require('../models/Group');
@@ -6,7 +10,7 @@ const { extractSchoolName, generateUniqueEmailId, formatEmailSubject } = require
 const path = require('path');
 const generateEmailTemplate = require('../templates/emailTemplate');
 
-// Initialize email transporter
+// Initialize Nodemailer email transporter with environment configuration
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: parseInt(process.env.SMTP_PORT),
@@ -17,11 +21,30 @@ const transporter = nodemailer.createTransport({
   }
 });
 
+/**
+ * MessageProcessor class handles processing messages from WhatsApp, 
+ * identifying rules that match the message content, and executing
+ * appropriate actions like sending emails or calling webhooks.
+ */
 class MessageProcessor {
+  /**
+   * Initialize the MessageProcessor with a WhatsApp client
+   * @param {Object} client - WhatsApp client instance
+   */
   constructor(client) {
     this.client = client;
   }
 
+  /**
+   * Process an incoming WhatsApp message
+   * - Detects if it's a reply/quoted message
+   * - Identifies the sender and group
+   * - Matches the message against group monitoring rules
+   * - Processes any media attachments
+   * - Executes actions based on matched rules
+   * 
+   * @param {Object} msg - WhatsApp message object
+   */
   async processMessage(msg) {
     try {
       // Check if this is a reply/quoted message
@@ -72,11 +95,12 @@ class MessageProcessor {
         }
       }
       
-      // Try to get group information
+      // Try to get group information or create if it doesn't exist
       let group = await Group.findOne({ groupId: msg.from });
       const schoolNameExtract = extractSchoolName(group ? group.name : msg.from);
       const schoolName = schoolNameExtract.school || schoolNameExtract; // Handle both object and string return
-      // Improved sender logic: use contact name, then pushname, then number, then fallback
+      
+      // Get sender information with fallbacks for different WhatsApp library versions
       let sender;
       try {
         const contact = await msg.getContact();
@@ -93,7 +117,8 @@ class MessageProcessor {
         sender = msg.author || msg.from;
         logger.warn(`Could not fetch contact info for sender: ${e.message}`);
       }
-      // If group not found, auto-create it
+      
+      // If group not found, auto-create it with default monitoring rules
       if (!group) {
         group = new Group({
           groupId: msg.from,
@@ -103,13 +128,13 @@ class MessageProcessor {
             {
               pattern: '\\[HELPDESK\\]',
               type: 'HELPDESK',
-              actions: [{ type: 'EMAIL' }], // Assuming default HELPDESK action is email
+              actions: [{ type: 'EMAIL' }],
               isActive: true
             },
             {
               pattern: '#helpdesk\\b',
               type: 'HELPDESK',
-              actions: [{ type: 'EMAIL' }], // Assuming default HELPDESK action is email
+              actions: [{ type: 'EMAIL' }],
               isActive: true
             }
           ]
@@ -150,12 +175,13 @@ class MessageProcessor {
         }
       }
 
+      // If no rule matched, log and exit processing
       if (!detectedMessageType) {
         logger.info(`No rules matched and no helpdesk media identified for group '${group.name}' (school: ${schoolName}) on message: '${msg.body}' from ${sender}`);
         return;
       }
       
-      // Create message record
+      // Create message record in database
       const messagePayload = {
         messageId: msg.id._serialized,
         groupId: msg.from,
@@ -171,11 +197,7 @@ class MessageProcessor {
         messagePayload.metadata.set('quotedMessageId', quotedMessageId);
       }
       
-      // If we have attachments, and your Message model supports storing some info about them (e.g., filenames)
-      // you could add that here. For now, emailAttachments are passed in-memory.
-      // if (emailAttachments.length > 0) {
-      //   messagePayload.attachments = emailAttachments.map(att => att.filename); // Example
-      // }
+      // Create and save the message in the database
       const message = new Message(messagePayload);
       await message.save();
 
@@ -189,37 +211,31 @@ class MessageProcessor {
         message.quotedMessage = quotedMessage;
       }
 
-      // Process each matched rule's actions
-      // If detectedMessageType is HELPDESK due to media, and no text rule matched,
-      // we need to ensure email action is considered if applicable.
+      // Process each matched rule's actions or use default actions for HELPDESK media
       let actionsToProcess = [];
       if (matchedRules.length > 0) {
         actionsToProcess = matchedRules.reduce((acc, rule) => acc.concat(rule.actions), []);
       } else if (detectedMessageType === 'HELPDESK' && emailAttachments.length > 0) {
-        // If only media triggered HELPDESK, find a generic HELPDESK rule or assume email.
-        // This part needs alignment with how actions are defined for types vs specific rules.
-        // For a robust solution, one might fetch default actions for 'HELPDESK' type.
-        // Quick approach: if a group has a HELPDESK rule, use its actions.
+        // If only media triggered HELPDESK, find a generic HELPDESK rule or assume email
         const helpdeskRule = group.monitoringRules.find(r => r.type === 'HELPDESK' && r.isActive);
         if (helpdeskRule && helpdeskRule.actions) {
           actionsToProcess = helpdeskRule.actions;
           logger.info(`Using actions from existing HELPDESK rule for media-triggered event in group '${group.name}'.`);
         } else {
-            // Fallback: if it's HELPDESK type (likely from media) and no rule matched, but we want to email.
-            // Add a default email action if not found.
-            // This assumes 'HELPDESK' implies an email to process.env.HELPDESK_EMAIL.
+            // Fallback: if it's HELPDESK type (likely from media) and no rule matched, but we want to email
             logger.info(`No explicit HELPDESK rule with actions found for media in group '${group.name}'. Adding default EMAIL action.`);
-            actionsToProcess.push({ type: 'EMAIL', config: new Map() }); // Ensure config is a Map if expected by sendEmail
+            actionsToProcess.push({ type: 'EMAIL', config: new Map() });
         }
       }
       
+      // Execute all actions for this message
       if (actionsToProcess.length > 0) {
         await this.processActions(actionsToProcess, message, group);
       } else {
         logger.info(`No actions to process for message type '${detectedMessageType}' in group '${group.name}'.`);
       }
 
-      // Update message status
+      // Update message status and timestamp
       message.status = 'COMPLETED';
       message.processedAt = new Date();
       await message.save();
@@ -230,11 +246,18 @@ class MessageProcessor {
 
     } catch (error) {
       logger.error(`Error processing message for group '${msg.from}': ${error.message}`, error);
-      // Do not re-throw, as it might stop the client.on('message_create') handler if not caught upstream.
-      // Or ensure upstream handles it. For now, log and let it continue.
+      // Do not re-throw to prevent crashing the message handler
     }
   }
 
+  /**
+   * Find all active rules that match the message content
+   * Uses regular expressions to match message content against rule patterns
+   * 
+   * @param {string} messageContent - The text content of the WhatsApp message
+   * @param {Array} rules - Array of monitoring rules with patterns
+   * @returns {Array} - Array of matched rules
+   */
   findMatchingRules(messageContent, rules) {
     return rules.filter(rule => {
       if (!rule.isActive) return false;
@@ -249,6 +272,13 @@ class MessageProcessor {
     });
   }
 
+  /**
+   * Process all actions for a matched rule (email, webhook, reply)
+   * 
+   * @param {Array} actions - Array of action objects from rules
+   * @param {Object} message - Message document from database
+   * @param {Object} group - Group document from database
+   */
   async processActions(actions, message, group) {
     const schoolName = extractSchoolName(group ? group.name : message.groupId);
     for (const action of actions) {
@@ -275,6 +305,17 @@ class MessageProcessor {
     }
   }
 
+  /**
+   * Send an email for the WhatsApp message
+   * - Supports email threading with In-Reply-To headers for replied messages
+   * - Includes attachments from WhatsApp
+   * - Uses HTML template for email content
+   * 
+   * @param {Object} config - Email configuration from the rule
+   * @param {Object} message - Message document from database
+   * @param {Object} group - Group document from database
+   * @returns {Object} - Email send result
+   */
   async sendEmail(config, message, group) {
     // Extract school name from group name format: "SR - School Name - something"
     const schoolNameExtract = extractSchoolName(group.name);
@@ -424,6 +465,13 @@ class MessageProcessor {
     }
   }
 
+  /**
+   * Call a webhook URL with message data
+   * 
+   * @param {Object} config - Webhook configuration from the rule
+   * @param {Object} message - Message document from database
+   * @param {Object} group - Group document from database
+   */
   async callWebhook(config, message, group) {
     const webhookUrl = config.get('url');
     const response = await fetch(webhookUrl, {
@@ -449,6 +497,13 @@ class MessageProcessor {
     logger.info(`Webhook called successfully: ${webhookUrl}`);
   }
 
+  /**
+   * Send a WhatsApp reply to the group
+   * 
+   * @param {Object} config - Reply configuration from the rule
+   * @param {Object} message - Message document from database
+   * @param {Object} group - Group document from database
+   */
   async sendReply(config, message, group) {
     const chat = await this.client.getChatById(message.groupId);
     const reply = await chat.sendMessage(config.get('message'));

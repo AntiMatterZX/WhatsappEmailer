@@ -1,0 +1,194 @@
+/* Dark Theme for WhatsApp Bot Admin */
+:root {
+  --dark-bg: #000000;
+  --dark-border: #1f1f1f;
+  --dark-text: #ffffff;
+  --dark-text-secondary: #a0a0a0;
+  --dark-hover: #1a1a1a;
+  --accent-purple: #9333ea;
+  --accent-blue: #3b82f6;
+}
+
+body {
+  background-color: var(--dark-bg);
+  color: var(--dark-text);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+}
+
+/* Navbar styles */
+.navbar-dark {
+  background-color: var(--dark-bg);
+  border-bottom: 1px solid var(--dark-border);
+}
+
+.top-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--dark-border);
+}
+
+.nav-tabs {
+  display: flex;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--dark-border);
+  gap: 1.5rem;
+  font-size: 0.875rem;
+}
+
+.project-badge {
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 50%;
+  background-color: var(--accent-purple);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dark-text);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.project-badge-large {
+  width: 2rem;
+  height: 2rem;
+}
+
+.tab-button {
+  padding-bottom: 0.5rem;
+  background: transparent;
+  border: none;
+  color: var(--dark-text-secondary);
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.tab-button:hover {
+  color: var(--dark-text);
+}
+
+.tab-button.active {
+  color: var(--dark-text);
+  border-bottom: 2px solid var(--dark-text);
+  font-weight: 500;
+}
+
+.plan-badge {
+  font-size: 0.7rem;
+  background-color: #333;
+  color: var(--dark-text-secondary);
+  padding: 0.125rem 0.5rem;
+  border-radius: 0.25rem;
+}
+
+/* Card styles */
+.card-dark {
+  background-color: #111;
+  border: 1px solid var(--dark-border);
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.card-dark .card-header {
+  background-color: #161616;
+  border-bottom: 1px solid var(--dark-border);
+  color: var(--dark-text);
+  padding: 1rem;
+}
+
+.card-dark .card-body {
+  padding: 1.5rem;
+}
+
+/* Button styles */
+.btn-dark-primary {
+  background-color: var(--accent-blue);
+  color: var(--dark-text);
+  border: none;
+  border-radius: 0.25rem;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-dark-primary:hover {
+  background-color: #2563eb;
+}
+
+.btn-dark-outline {
+  background-color: transparent;
+  color: var(--dark-text-secondary);
+  border: 1px solid var(--dark-border);
+  border-radius: 0.25rem;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-dark-outline:hover {
+  color: var(--dark-text);
+  border-color: var(--dark-text-secondary);
+}
+
+/* Table styles */
+.table-dark {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 1rem 0;
+}
+
+.table-dark th {
+  text-align: left;
+  padding: 0.75rem 1rem;
+  color: var(--dark-text-secondary);
+  border-bottom: 1px solid var(--dark-border);
+  font-weight: normal;
+}
+
+.table-dark td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--dark-border);
+  color: var(--dark-text);
+}
+
+.table-dark tr:hover td {
+  background-color: var(--dark-hover);
+}
+
+/* Alert and status indicators */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 1rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.status-success {
+  background-color: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.status-warning {
+  background-color: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+}
+
+.status-error {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+/* Main content area */
+.main-dark {
+  margin: 2rem;
+}
+
+/* Helper utilities */
+.text-secondary {
+  color: var(--dark-text-secondary);
+} 

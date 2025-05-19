@@ -1,0 +1,961 @@
+<%- contentFor('body') %>
+
+<div class="mb-4">
+  <div class="d-flex justify-content-between align-items-center">
+    <h1 class="mb-0">Logs</h1>
+    <div>
+      <button id="liveToggle" class="btn-dark-outline me-2">
+        <i class="bi bi-play-fill me-1"></i><span>Live Mode</span>
+      </button>
+      <button id="refreshLogs" class="btn-dark-outline me-2">
+        <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+      </button>
+      <button id="downloadLogs" class="btn-dark-primary">
+        <i class="bi bi-download me-1"></i>Download
+      </button>
+    </div>
+  </div>
+  <p class="text-secondary mt-2">View and analyze application logs</p>
+</div>
+
+<div class="card-dark mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <div class="d-flex align-items-center">
+      <i class="bi bi-terminal me-2"></i>
+      <span>Log Viewer</span>
+    </div>
+    <div class="d-flex align-items-center">
+      <div class="input-group me-3" style="width: 200px;">
+        <span class="input-group-text bg-dark border-secondary text-white">
+          <i class="bi bi-search"></i>
+        </span>
+        <input type="text" id="logSearch" class="form-control bg-dark text-white border-secondary" placeholder="Filter logs...">
+      </div>
+      <div class="btn-group">
+        <% logs.forEach((log, index) => { %>
+          <button class="btn-dark-outline <%= index === 0 ? 'active' : '' %>" data-file="<%= log.path %>" onclick="switchLogFile(this)">
+            <%= log.name %>
+          </button>
+        <% }) %>
+      </div>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <div id="logContainer" style="height: 600px; font-family: monospace;" class="p-0 bg-black">
+      <div class="d-flex align-items-center justify-content-between p-2 border-bottom border-secondary">
+        <div id="liveIndicator" class="d-none">
+          <span class="badge bg-primary me-2 pulse">LIVE</span>
+          <small class="text-muted">Auto-refreshing</small>
+        </div>
+        <div id="timeline" class="w-100 d-flex justify-content-center">
+          <div class="timeline-bar position-relative" style="width: 80%;">
+            <div class="timeline-progress" style="width: 0;"></div>
+          </div>
+        </div>
+        <div>
+          <span id="logCount" class="text-muted">0 entries</span>
+        </div>
+      </div>
+      <table class="terminal-log-table w-100" style="table-layout: fixed;">
+        <thead>
+          <tr>
+            <th style="width: 22%;">Time</th>
+            <th style="width: 8%;">Status</th>
+            <th style="width: 15%;">Host</th>
+            <th style="width: 15%;">
+              <div class="d-flex align-items-center">
+                <span>Log Level</span>
+                <button class="btn btn-sm text-secondary border-0 ms-2 p-0" title="Level Filter">
+                  <i class="bi bi-funnel-fill"></i>
+                </button>
+              </div>
+            </th>
+            <th style="width: 40%;">Message</th>
+          </tr>
+        </thead>
+        <tbody id="logTableBody">
+          <tr>
+            <td colspan="5" class="text-center py-5">
+              <div class="spinner-border text-light" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- WhatsApp Connection Control Panel -->
+<div class="card-dark mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <div class="d-flex align-items-center">
+      <i class="bi bi-whatsapp me-2"></i>
+      <span>WhatsApp Connection</span>
+    </div>
+    <button id="refreshConnection" class="btn-dark-outline">
+      <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+    </button>
+  </div>
+  <div class="card-body bg-black p-0">
+    <div class="p-4">
+      <div class="d-flex align-items-center mb-3">
+        <div id="statusBadge" class="status-badge status-unknown me-3">
+          <i class="bi bi-question-circle"></i>
+        </div>
+        <div id="statusMessage" class="fs-5">Checking WhatsApp connection status...</div>
+      </div>
+      
+      <div class="progress mb-4 bg-dark">
+        <div id="connectionProgress" class="progress-bar bg-secondary" role="progressbar" style="width: 0%"></div>
+      </div>
+      
+      <div class="row">
+        <div class="col-md-6">
+          <div id="connectionDetails">
+            <!-- Connection details will be populated here -->
+          </div>
+          
+          <div class="mt-4 d-flex" id="connectionButtons">
+            <button class="btn-dark-outline me-3 d-none" id="disconnectBtn">
+              <i class="bi bi-x-circle me-2"></i>Disconnect
+            </button>
+            <button class="btn-dark-outline me-3 d-none" id="connectBtn">
+              <i class="bi bi-qr-code me-2"></i>Connect
+            </button>
+            <button class="btn-dark-outline d-none" id="restartClient">
+              <i class="bi bi-arrow-repeat me-2"></i>Restart
+            </button>
+          </div>
+        </div>
+        
+        <div class="col-md-6">
+          <div id="qrCode" class="d-none text-center p-3 bg-white rounded"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .terminal-log-table {
+    border-spacing: 0;
+    border-collapse: collapse;
+    color: #ffffff;
+    width: 100%;
+  }
+  
+  .terminal-log-table th {
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid #333;
+    color: #999;
+    font-weight: normal;
+    user-select: none;
+    font-size: 0.85rem;
+  }
+  
+  .terminal-log-table td {
+    padding: 6px 12px;
+    border-bottom: 1px solid #111;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.9rem;
+  }
+  
+  .terminal-log-table tr:hover td {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+  
+  /* Hide scrollbar but keep functionality */
+  #logContainer {
+    overflow-y: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+  }
+  
+  #logContainer::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+  
+  /* Status code badges */
+  td:nth-child(2) {
+    font-weight: 500;
+  }
+  
+  /* Log level colors */
+  .level-info {
+    color: #4ade80; /* green */
+  }
+  
+  .level-debug {
+    color: #60a5fa; /* blue */
+  }
+  
+  .level-warn {
+    color: #fb923c; /* orange */
+  }
+  
+  .level-error {
+    color: #f87171; /* red */
+  }
+  
+  /* Status code colors */
+  .status-200 {
+    color: #4ade80; /* green */
+  }
+  
+  .status-300, .status-301, .status-302, .status-307 {
+    color: #60a5fa; /* blue */
+  }
+  
+  .status-400, .status-401, .status-403, .status-404 {
+    color: #f87171; /* red */
+  }
+  
+  .status-500, .status-502, .status-503, .status-504 {
+    color: #fb923c; /* orange */
+  }
+  
+  /* Timeline bar */
+  .timeline-bar {
+    height: 4px;
+    background-color: #333;
+    border-radius: 2px;
+  }
+  
+  .timeline-progress {
+    height: 4px;
+    background-color: #3b82f6;
+    border-radius: 2px;
+    transition: width 0.3s ease;
+  }
+  
+  /* Live mode indicator */
+  .pulse {
+    animation: pulse-animation 2s infinite;
+  }
+  
+  @keyframes pulse-animation {
+    0% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+  
+  /* Connection status badges */
+  .status-badge {
+    padding: 6px;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .status-connected {
+    background-color: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+  }
+  
+  .status-disconnected {
+    background-color: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+  }
+  
+  .status-connecting {
+    background-color: rgba(245, 158, 11, 0.2);
+    color: #f59e0b;
+  }
+  
+  .status-unknown {
+    background-color: rgba(107, 114, 128, 0.2);
+    color: #9ca3af;
+  }
+</style>
+
+<script>
+  let currentLogFile = '<%= logs[0]?.path %>';
+  let logData = [];
+  let liveMode = false;
+  let liveInterval = null;
+  let currentStartTime = null;
+  let currentEndTime = null;
+  
+  document.addEventListener('DOMContentLoaded', async function() {
+    // Load initial log file
+    await loadLogFile(currentLogFile);
+    
+    // Set up event listeners
+    document.getElementById('refreshLogs').addEventListener('click', () => loadLogFile(currentLogFile));
+    document.getElementById('downloadLogs').addEventListener('click', downloadCurrentLog);
+    document.getElementById('logSearch').addEventListener('input', filterLogs);
+    document.getElementById('liveToggle').addEventListener('click', toggleLiveMode);
+    document.getElementById('refreshConnection').addEventListener('click', checkWhatsAppStatus);
+    
+    // Initialize WhatsApp status
+    checkWhatsAppStatus();
+  });
+  
+  function toggleLiveMode() {
+    liveMode = !liveMode;
+    const liveButton = document.getElementById('liveToggle');
+    const liveIndicator = document.getElementById('liveIndicator');
+    
+    if (liveMode) {
+      // Enable live mode
+      liveButton.classList.add('btn-dark-primary');
+      liveButton.classList.remove('btn-dark-outline');
+      liveButton.innerHTML = '<i class="bi bi-pause-fill me-1"></i><span>Pause</span>';
+      liveIndicator.classList.remove('d-none');
+      
+      // Setup auto-refresh
+      liveInterval = setInterval(() => {
+        loadLogFile(currentLogFile, true);
+      }, 1000); // Update every second in live mode
+    } else {
+      // Disable live mode
+      liveButton.classList.remove('btn-dark-primary');
+      liveButton.classList.add('btn-dark-outline');
+      liveButton.innerHTML = '<i class="bi bi-play-fill me-1"></i><span>Live Mode</span>';
+      liveIndicator.classList.add('d-none');
+      
+      // Clear interval
+      if (liveInterval) {
+        clearInterval(liveInterval);
+        liveInterval = null;
+      }
+    }
+  }
+  
+  async function loadLogFile(fileName, isLiveUpdate = false) {
+    try {
+      if (!isLiveUpdate) {
+        const logTableBody = document.getElementById('logTableBody');
+        logTableBody.innerHTML = `
+          <tr>
+            <td colspan="5" class="text-center py-5">
+              <div class="spinner-border text-light" role="status">
+                <span class="visually-hidden">Loading...</span>
+              </div>
+            </td>
+          </tr>
+        `;
+      }
+      
+      const response = await fetch(`/logs/api/${fileName}`);
+      const data = await response.json();
+      
+      logData = data.lines;
+      renderLogData(logData, isLiveUpdate);
+      
+      // Update log count
+      document.getElementById('logCount').textContent = `${logData.length} entries`;
+      
+      // Update timeline if not a live update
+      if (!isLiveUpdate) {
+        updateTimeline();
+      }
+      
+      // Don't clear search during live updates
+      if (!isLiveUpdate) {
+        document.getElementById('logSearch').value = '';
+      }
+    } catch (error) {
+      console.error('Failed to load logs:', error);
+      document.getElementById('logTableBody').innerHTML = `
+        <tr>
+          <td colspan="5">
+            <div class="alert status-error m-3">
+              <i class="bi bi-exclamation-triangle me-2"></i>
+              Failed to load log file: ${error.message || 'Unknown error'}
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+  }
+  
+  function updateTimeline() {
+    if (logData.length === 0) return;
+    
+    // Extract timestamps if available
+    let timestamps = logData
+      .map(log => {
+        const match = log.timestamp || 
+                    (log.raw && log.raw.match(/\d{4}-\d{2}-\d{2}|\w{3}\s\d{2}.*?\d{2}:\d{2}:\d{2}/));
+        return match ? new Date(match) : null;
+      })
+      .filter(date => date && !isNaN(date.getTime()));
+    
+    if (timestamps.length > 0) {
+      currentStartTime = new Date(Math.min(...timestamps.map(d => d.getTime())));
+      currentEndTime = new Date(Math.max(...timestamps.map(d => d.getTime())));
+      
+      // Update timeline progress
+      document.querySelector('.timeline-progress').style.width = '100%';
+    }
+  }
+  
+  function renderLogData(logs, isLiveUpdate = false) {
+    const logTableBody = document.getElementById('logTableBody');
+    
+    if (!logs || logs.length === 0) {
+      logTableBody.innerHTML = `
+        <tr>
+          <td colspan="5" class="text-center py-5 text-secondary">
+            <i class="bi bi-journal-text display-1 mb-3 d-block"></i>
+            <p>No log entries found</p>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+    
+    // Process log entries to match the format in the screenshot
+    const processedLogs = logs.map(log => {
+      try {
+        // Try to extract common HTTP log format or our application log format
+        const rawLog = log.raw || '';
+        
+        // Parse timestamp
+        let timestamp = '';
+        let status = '';
+        let host = 'production-star';
+        let logLevel = '';
+        let message = '';
+        let jsonData = null;
+        
+        // Try to extract JSON data if it exists
+        if (rawLog.includes('{"')) {
+          const jsonStart = rawLog.indexOf('{"');
+          if (jsonStart !== -1) {
+            try {
+              const jsonStr = rawLog.substring(jsonStart);
+              jsonData = JSON.parse(jsonStr);
+              
+              // Extract log level from JSON
+              if (jsonData.level) {
+                logLevel = jsonData.level;
+              }
+              
+              // Extract message from JSON
+              if (jsonData.message) {
+                message = jsonData.message;
+              } else if (jsonData.cause) {
+                message = JSON.stringify(jsonData.cause);
+              }
+            } catch (e) {
+              // JSON parsing failed, continue with other methods
+            }
+          }
+        }
+        
+        // Try to extract data from known log formats
+        if (rawLog.includes('GET') || rawLog.includes('POST') || rawLog.includes('PUT') || rawLog.includes('DELETE')) {
+          // HTTP request log
+          const parts = rawLog.split(' ');
+          
+          // For timestamp, look for patterns like dates or timestamps
+          if (parts.length > 0 && (parts[0].includes(':') || parts[0].match(/^\d{4}-\d{2}-\d{2}/) || parts[0].match(/^\w{3}/))) {
+            timestamp = parts[0];
+            if (parts[1] && parts[1].match(/^\d{2}:\d{2}:\d{2}/)) {
+              timestamp += ' ' + parts[1];
+            }
+          }
+          
+          // For HTTP status code, look for 3-digit numbers that could be status codes
+          for (let i = 0; i < parts.length; i++) {
+            if (parts[i].match(/^[1-5][0-9][0-9]$/)) {
+              status = parts[i];
+              break;
+            }
+          }
+          
+          // For request path, look for parts starting with /
+          for (let i = 0; i < parts.length; i++) {
+            if (parts[i].startsWith('/')) {
+              message = parts[i] + (parts[i+1] ? ' ' + parts.slice(i+1).join(' ') : '');
+              break;
+            }
+          }
+          
+          // If no explicit log level, determine by status code
+          if (!logLevel) {
+            const statusNum = parseInt(status);
+            if (!isNaN(statusNum)) {
+              if (statusNum >= 200 && statusNum < 300) logLevel = 'info';
+              else if (statusNum >= 300 && statusNum < 400) logLevel = 'debug';
+              else if (statusNum >= 400 && statusNum < 500) logLevel = 'warn';
+              else if (statusNum >= 500) logLevel = 'error';
+            }
+          }
+        } else {
+          // Generic log format
+          
+          // Extract timestamp
+          const dateMatch = rawLog.match(/\d{4}-\d{2}-\d{2}|\w{3}\s\d{2}/);
+          const timeMatch = rawLog.match(/\d{2}:\d{2}:\d{2}/);
+          
+          if (dateMatch) timestamp = dateMatch[0];
+          if (timeMatch) timestamp += ' ' + timeMatch[0];
+          
+          // Extract status code if present
+          const statusMatch = rawLog.match(/\b([1-5][0-9][0-9])\b/);
+          if (statusMatch) status = statusMatch[1];
+          
+          // Extract log level if not already found
+          if (!logLevel) {
+            if (rawLog.includes('ERROR') || rawLog.toLowerCase().includes('error')) {
+              logLevel = 'error';
+            } else if (rawLog.includes('WARN') || rawLog.toLowerCase().includes('warn')) {
+              logLevel = 'warn';
+            } else if (rawLog.includes('INFO') || rawLog.toLowerCase().includes('info')) {
+              logLevel = 'info';
+            } else if (rawLog.includes('DEBUG') || rawLog.toLowerCase().includes('debug')) {
+              logLevel = 'debug';
+            } else {
+              logLevel = 'info'; // Default level
+            }
+          }
+          
+          // Extract message if not already found
+          if (!message) {
+            // Try to extract message from log format like '2023-01-01 - some message'
+            if (rawLog.includes(' - ')) {
+              const parts = rawLog.split(' - ');
+              message = parts.slice(1).join(' - ');
+            } else {
+              message = rawLog;
+            }
+          }
+        }
+        
+        return { 
+          timestamp, 
+          status, 
+          host, 
+          logLevel, 
+          message,
+          jsonData,
+          raw: rawLog 
+        };
+      } catch (e) {
+        // If parsing fails, just return the raw log
+        return { 
+          timestamp: '', 
+          status: '', 
+          host: 'production-star', 
+          logLevel: 'info',
+          message: log.raw || '', 
+          raw: log.raw || '' 
+        };
+      }
+    });
+    
+    // Generate table rows
+    const rows = processedLogs.map(log => {
+      // Determine status class for color coding
+      let statusClass = '';
+      if (log.status) {
+        const statusNum = parseInt(log.status);
+        if (statusNum >= 200 && statusNum < 300) statusClass = 'status-200';
+        else if (statusNum >= 300 && statusNum < 400) statusClass = 'status-300';
+        else if (statusNum >= 400 && statusNum < 500) statusClass = 'status-400';
+        else if (statusNum >= 500) statusClass = 'status-500';
+      }
+      
+      // Determine log level class for color coding
+      const levelClass = log.logLevel ? `level-${log.logLevel.toLowerCase()}` : '';
+      
+      // Format the timestamp to match the screenshot: YYYY-MM-DD HH:MM:SS or MAY 20 01:16:31.40
+      let formattedTime = log.timestamp;
+      if (!formattedTime) {
+        const date = new Date();
+        formattedTime = `${date.toLocaleString('en-US', { month: 'short' }).toUpperCase()} ${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}.${String(date.getMilliseconds()).substring(0, 2)}`;
+      }
+      
+      // Format message with proper JSON message display
+      let displayMessage = log.message || '';
+      if (log.jsonData && log.jsonData.message) {
+        displayMessage = log.jsonData.message;
+      }
+      
+      // Format log level with icon
+      const logLevelDisplay = log.logLevel ? log.logLevel.toUpperCase() : '';
+      let logLevelIcon = '';
+      if (log.logLevel) {
+        switch(log.logLevel.toLowerCase()) {
+          case 'error':
+            logLevelIcon = '<i class="bi bi-exclamation-circle-fill me-1"></i>';
+            break;
+          case 'warn':
+            logLevelIcon = '<i class="bi bi-exclamation-triangle-fill me-1"></i>';
+            break;
+          case 'info':
+            logLevelIcon = '<i class="bi bi-info-circle-fill me-1"></i>';
+            break;
+          case 'debug':
+            logLevelIcon = '<i class="bi bi-bug-fill me-1"></i>';
+            break;
+          default:
+            logLevelIcon = '';
+        }
+      }
+      
+      return `
+        <tr>
+          <td>${formattedTime}</td>
+          <td class="${statusClass}">${log.status || ''}</td>
+          <td>${log.host}</td>
+          <td class="${levelClass}">${logLevelIcon}${logLevelDisplay}</td>
+          <td>${displayMessage}</td>
+        </tr>
+      `;
+    }).join('');
+    
+    // If this is a live update, we want to append instead of replace
+    if (isLiveUpdate && logData.length > 0) {
+      // Only add new rows if there are more logs than before
+      if (logs.length > logData.length) {
+        const newRows = rows.slice(logData.length);
+        logTableBody.innerHTML += newRows;
+        
+        // Scroll to bottom when in live mode
+        const logContainer = document.getElementById('logContainer');
+        logContainer.scrollTop = logContainer.scrollHeight;
+      }
+    } else {
+      logTableBody.innerHTML = rows;
+      
+      // Scroll to bottom on initial load
+      const logContainer = document.getElementById('logContainer');
+      logContainer.scrollTop = logContainer.scrollHeight;
+    }
+  }
+  
+  function switchLogFile(button) {
+    // Update active button
+    document.querySelectorAll('.btn-dark-outline').forEach(btn => {
+      btn.classList.remove('active');
+    });
+    button.classList.add('active');
+    
+    // Load the selected log file
+    currentLogFile = button.getAttribute('data-file');
+    loadLogFile(currentLogFile);
+  }
+  
+  function filterLogs() {
+    const searchTerm = document.getElementById('logSearch').value.toLowerCase();
+    
+    if (!searchTerm) {
+      renderLogData(logData);
+      return;
+    }
+    
+    const filteredLogs = logData.filter(log => {
+      const text = log.raw.toLowerCase();
+      return text.includes(searchTerm);
+    });
+    
+    renderLogData(filteredLogs);
+  }
+  
+  function downloadCurrentLog() {
+    // Create a text file from log data
+    const text = logData.map(log => log.raw).join('\n');
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    
+    // Create download link
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = currentLogFile;
+    a.click();
+    
+    // Clean up
+    URL.revokeObjectURL(url);
+  }
+  
+  // WhatsApp connection status management
+  async function checkWhatsAppStatus() {
+    const statusBadge = document.getElementById('statusBadge');
+    const statusMessage = document.getElementById('statusMessage');
+    const connectionDetails = document.getElementById('connectionDetails');
+    const qrCode = document.getElementById('qrCode');
+    const connectBtn = document.getElementById('connectBtn');
+    const disconnectBtn = document.getElementById('disconnectBtn');
+    const restartBtn = document.getElementById('restartClient');
+    const connectionProgress = document.getElementById('connectionProgress');
+    
+    try {
+      // Update UI to loading state
+      statusBadge.className = 'status-badge status-unknown me-3';
+      statusBadge.innerHTML = '<i class="bi bi-arrow-repeat spin"></i>';
+      statusMessage.textContent = 'Checking WhatsApp connection status...';
+      connectionProgress.style.width = '30%';
+      connectionProgress.className = 'progress-bar bg-info';
+      
+      const response = await fetch('/api/whatsapp/status');
+      const data = await response.json();
+      
+      // Update progress
+      connectionProgress.style.width = '100%';
+      setTimeout(() => {
+        connectionProgress.style.width = '0%';
+      }, 1000);
+      
+      // Reset button states
+      connectBtn.classList.add('d-none');
+      disconnectBtn.classList.add('d-none');
+      restartBtn.classList.add('d-none');
+      
+      if (data.connected) {
+        // Connected state
+        statusBadge.className = 'status-badge status-connected me-3';
+        statusBadge.innerHTML = '<i class="bi bi-check-circle"></i>';
+        statusMessage.textContent = 'WhatsApp is connected and ready';
+        connectionProgress.className = 'progress-bar bg-success';
+        
+        // Show disconnect button
+        disconnectBtn.classList.remove('d-none');
+        restartBtn.classList.remove('d-none');
+        
+        // Format connection date for display
+        const connectedDate = new Date(data.connectedSince);
+        const formattedDate = connectedDate.toLocaleDateString('en-US', { 
+          month: 'numeric', 
+          day: 'numeric', 
+          year: 'numeric' 
+        });
+        
+        const formattedTime = connectedDate.toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        });
+        
+        // Update details
+        connectionDetails.innerHTML = `
+          <div>
+            <div class="text-secondary mb-1">Connected since</div>
+            <div class="fs-5">${formattedDate}, ${formattedTime}</div>
+          </div>
+          <div class="mt-3">
+            <div class="text-secondary mb-1">Phone number</div>
+            <div class="fs-5">${data.phone || 'Unknown'}</div>
+          </div>
+        `;
+        
+        qrCode.classList.add('d-none');
+      } else if (data.qrCode) {
+        // QR code available - awaiting authentication
+        statusBadge.className = 'status-badge status-connecting me-3';
+        statusBadge.innerHTML = '<i class="bi bi-qr-code"></i>';
+        statusMessage.textContent = 'Scan QR code with WhatsApp on your phone';
+        connectionProgress.className = 'progress-bar bg-warning';
+        
+        // Display QR code
+        qrCode.classList.remove('d-none');
+        qrCode.innerHTML = data.qrCode;
+        
+        // Clear connection details
+        connectionDetails.innerHTML = `
+          <div class="alert alert-info p-2">
+            <small>
+              <i class="bi bi-info-circle me-1"></i>
+              Scan the QR code to authenticate WhatsApp Web
+            </small>
+          </div>
+        `;
+        
+        // Show restart button
+        restartBtn.classList.remove('d-none');
+      } else {
+        // Disconnected state
+        statusBadge.className = 'status-badge status-disconnected me-3';
+        statusBadge.innerHTML = '<i class="bi bi-x-circle"></i>';
+        statusMessage.textContent = 'WhatsApp is disconnected';
+        connectionProgress.className = 'progress-bar bg-danger';
+        
+        // Show connect button
+        connectBtn.classList.remove('d-none');
+        restartBtn.classList.remove('d-none');
+        
+        // Clear connection details and QR
+        connectionDetails.innerHTML = `
+          <div class="alert alert-secondary p-2 bg-dark border-secondary">
+            <i class="bi bi-info-circle me-1"></i>
+            Not connected to WhatsApp
+          </div>
+        `;
+        qrCode.classList.add('d-none');
+      }
+      
+      // Add event listeners for the buttons
+      disconnectBtn.addEventListener('click', disconnectWhatsApp);
+      connectBtn.addEventListener('click', connectWhatsApp);
+      restartBtn.addEventListener('click', restartWhatsAppClient);
+      
+    } catch (error) {
+      console.error('Error checking WhatsApp status:', error);
+      
+      // Set error state
+      statusBadge.className = 'status-badge status-disconnected me-3';
+      statusBadge.innerHTML = '<i class="bi bi-exclamation-circle"></i>';
+      statusMessage.textContent = 'Error checking WhatsApp status';
+      connectionProgress.className = 'progress-bar bg-danger';
+      connectionProgress.style.width = '100%';
+      
+      // Show details of error
+      connectionDetails.innerHTML = `
+        <div class="alert alert-danger p-2">
+          <small>
+            <i class="bi bi-exclamation-triangle me-1"></i>
+            Error: ${error.message || 'Unknown error'}
+          </small>
+        </div>
+      `;
+      
+      qrCode.classList.add('d-none');
+      restartBtn.classList.remove('d-none');
+    }
+  }
+  
+  async function restartWhatsAppClient() {
+    if (confirm('Are you sure you want to restart the WhatsApp client?')) {
+      try {
+        // Update UI to show restart in progress
+        document.getElementById('statusBadge').className = 'status-badge status-connecting me-3';
+        document.getElementById('statusBadge').innerHTML = '<i class="bi bi-arrow-clockwise"></i>';
+        document.getElementById('statusMessage').textContent = 'Restarting WhatsApp client...';
+        document.getElementById('connectionProgress').style.width = '50%';
+        document.getElementById('connectionProgress').className = 'progress-bar bg-warning progress-bar-striped progress-bar-animated';
+        
+        const response = await fetch('/api/whatsapp/restart', {
+          method: 'POST'
+        });
+        
+        if (response.ok) {
+          // Start checking for status after a brief delay
+          setTimeout(() => {
+            checkWhatsAppStatus();
+          }, 3000);
+          
+          // Check again after a longer delay to see QR code
+          setTimeout(() => {
+            checkWhatsAppStatus();
+          }, 10000);
+        } else {
+          const data = await response.json();
+          alert(`Failed to restart WhatsApp client: ${data.error || 'Unknown error'}`);
+          checkWhatsAppStatus();
+        }
+      } catch (error) {
+        console.error('Error restarting WhatsApp client:', error);
+        alert(`Error restarting WhatsApp client: ${error.message || 'Unknown error'}`);
+        checkWhatsAppStatus();
+      }
+    }
+  }
+  
+  async function connectWhatsApp() {
+    if (confirm('Do you want to connect to WhatsApp? This will generate a new QR code to scan.')) {
+      try {
+        // Update UI to show connection in progress
+        document.getElementById('statusBadge').className = 'status-badge status-connecting me-3';
+        document.getElementById('statusBadge').innerHTML = '<i class="bi bi-arrow-clockwise"></i>';
+        document.getElementById('statusMessage').textContent = 'Initializing WhatsApp client...';
+        document.getElementById('connectionProgress').style.width = '50%';
+        document.getElementById('connectionProgress').className = 'progress-bar bg-warning progress-bar-striped progress-bar-animated';
+        
+        // Hide all buttons while connecting
+        document.getElementById('connectBtn').classList.add('d-none');
+        document.getElementById('disconnectBtn').classList.add('d-none');
+        document.getElementById('restartClient').classList.add('d-none');
+        
+        // Use the new connect endpoint for QR code generation
+        const response = await fetch('/api/whatsapp/connect', {
+          method: 'POST'
+        });
+        
+        if (response.ok) {
+          // Show a message during connection
+          document.getElementById('connectionDetails').innerHTML = `
+            <div class="alert alert-warning p-2">
+              <i class="bi bi-hourglass-split me-1"></i>
+              Generating QR code, please wait...
+            </div>
+          `;
+          
+          // Start checking for status to see QR code
+          setTimeout(() => {
+            checkWhatsAppStatus();
+          }, 5000);
+          
+          // Check again after a longer delay if needed
+          setTimeout(() => {
+            checkWhatsAppStatus();
+          }, 10000);
+        } else {
+          const data = await response.json();
+          alert(`Failed to connect WhatsApp: ${data.error || 'Unknown error'}`);
+          checkWhatsAppStatus();
+        }
+      } catch (error) {
+        console.error('Error connecting WhatsApp:', error);
+        alert(`Error connecting WhatsApp: ${error.message || 'Unknown error'}`);
+        checkWhatsAppStatus();
+      }
+    }
+  }
+  
+  async function disconnectWhatsApp() {
+    if (confirm('Are you sure you want to disconnect the WhatsApp client? You will need to scan a QR code to reconnect.')) {
+      try {
+        // Update UI to show disconnection in progress
+        document.getElementById('statusBadge').className = 'status-badge status-connecting me-3';
+        document.getElementById('statusBadge').innerHTML = '<i class="bi bi-arrow-clockwise"></i>';
+        document.getElementById('statusMessage').textContent = 'Disconnecting WhatsApp...';
+        document.getElementById('connectionProgress').style.width = '50%';
+        document.getElementById('connectionProgress').className = 'progress-bar bg-warning progress-bar-striped progress-bar-animated';
+        
+        // Hide all buttons while disconnecting
+        document.getElementById('connectBtn').classList.add('d-none');
+        document.getElementById('disconnectBtn').classList.add('d-none');
+        document.getElementById('restartClient').classList.add('d-none');
+        
+        // Use the new disconnect endpoint
+        const response = await fetch('/api/whatsapp/disconnect', {
+          method: 'POST'
+        });
+        
+        if (response.ok) {
+          // Check the new status after disconnection
+          setTimeout(() => {
+            checkWhatsAppStatus();
+          }, 2000);
+        } else {
+          const data = await response.json();
+          alert(`Failed to disconnect WhatsApp: ${data.error || 'Unknown error'}`);
+          checkWhatsAppStatus();
+        }
+      } catch (error) {
+        console.error('Error disconnecting WhatsApp:', error);
+        alert(`Error disconnecting WhatsApp: ${error.message || 'Unknown error'}`);
+        checkWhatsAppStatus();
+      }
+    }
+  }
+</script> 

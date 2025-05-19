@@ -1,6 +1,17 @@
+/**
+ * WhatsApp Bot Server Application
+ * Main entry point that initializes the WhatsApp client, Express server, and message processing
+ * 
+ * This application monitors WhatsApp group messages, processes them according to rules,
+ * and can forward messages to email or webhooks based on configured rules
+ */
+
+// Load environment variables from .env file
 require('dotenv').config();
 // Load Redis configuration early to suppress warnings
 require('./utils/redisConfig');
+
+// Core dependencies
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const express = require('express');
@@ -9,15 +20,25 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
 const http = require('http');
+const session = require('express-session');
+const flash = require('connect-flash');
+const cookieParser = require('cookie-parser');
+const expressLayouts = require('express-ejs-layouts');
+
+// Application modules
 const { setupMessageQueue } = require('./queues/messageQueue');
 const webhookRoutes = require('./routes/webhook');
 const logsRoutes = require('./routes/logs');
 const logsUiRoutes = require('./routes/logs-ui');
+const authRoutes = require('./routes/auth-routes');
+const apiRoutes = require('./routes/api-routes');
+const settingsRoutes = require('./routes/settings-routes');
 const MessageProcessor = require('./services/messageProcessor');
 const AutomationEngine = require('./services/automationEngine');
 const metrics = require('./monitoring/prometheus');
 const logger = require('./utils/logger');
-// Initialize log monitor
+
+// Initialize log monitor for centralized logging
 require('./utils/logMonitor');
 const fs = require('fs');
 
@@ -25,6 +46,28 @@ const fs = require('fs');
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+
+// Set up EJS templating
+app.set('view engine', 'ejs');
+app.set('views', path.join(__dirname, 'views'));
+app.use(expressLayouts);
+app.set('layout', 'layouts/main');
+
+// Session configuration
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'whatsapp-bot-secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { 
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+// Flash messages
+app.use(flash());
 
 // Create HTTP server
 const server = http.createServer(app);
@@ -32,9 +75,9 @@ const server = http.createServer(app);
 // Serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Security middleware
+// ----- Security middleware -----
 
-// Rate limiting
+// Rate limiting to prevent abuse
 const limiter = rateLimit({
   windowMs: process.env.RATE_LIMIT_WINDOW * 60 * 1000,
   max: process.env.RATE_LIMIT_MAX_REQUESTS
@@ -50,7 +93,10 @@ app.get('/metrics', async (req, res) => {
   res.end(await metrics.register.metrics());
 });
 
-// Initialize WhatsApp client
+/**
+ * Initialize WhatsApp client with authentication and browser settings
+ * Uses LocalAuth for session persistence
+ */
 const client = new Client({
   authStrategy: new LocalAuth({
     dataPath: process.env.WHATSAPP_SESSION_PATH
@@ -75,37 +121,75 @@ const client = new Client({
   }
 });
 
-// Initialize message queue
+// Store WhatsApp client in app for access from routes
+app.set('whatsappClient', client);
+
+// Initialize message queue and services
 const messageQueue = setupMessageQueue();
 const messageProcessor = new MessageProcessor(client, messageQueue);
 const automationEngine = new AutomationEngine(client, messageQueue);
 
-// WhatsApp client event handlers
+// ----- WhatsApp client event handlers -----
+
+/**
+ * Display QR code for WhatsApp Web authentication
+ */
 client.on('qr', (qr) => {
   qrcode.generate(qr, { small: true });
   logger.info('QR Code generated. Please scan to authenticate.');
+  
+  // Save QR for web display
+  const qrCodeSvg = require('qrcode-svg');
+  const qrSvg = new qrCodeSvg({
+    content: qr,
+    width: 256,
+    height: 256,
+    color: '#000000',
+    background: '#ffffff',
+    ecl: 'M'
+  }).svg();
+  
+  app.set('whatsappQR', qrSvg);
 });
 
+/**
+ * Handle client ready event
+ */
 client.on('ready', () => {
   logger.info('WhatsApp client is ready!');
   metrics.whatsappConnectionGauge.set(1);
+  app.set('whatsappConnectedSince', new Date());
+  app.set('whatsappQR', null);
 });
 
+/**
+ * Handle successful authentication
+ */
 client.on('authenticated', () => {
   logger.info('WhatsApp client authenticated');
 });
 
+/**
+ * Handle authentication failures
+ */
 client.on('auth_failure', (msg) => {
   logger.error('WhatsApp authentication failed:', msg);
   metrics.whatsappConnectionGauge.set(0);
 });
 
+/**
+ * Handle client disconnection
+ */
 client.on('disconnected', () => {
   logger.warn('WhatsApp client disconnected');
   metrics.whatsappConnectionGauge.set(0);
+  app.set('whatsappConnectedSince', null);
 });
 
-// Handle incoming messages
+/**
+ * Handle incoming messages
+ * Processes messages through messageProcessor and automationEngine
+ */
 client.on('message_create', async (msg) => {
   try {
     if (msg.fromMe) return;
@@ -134,12 +218,34 @@ client.on('message_create', async (msg) => {
   }
 });
 
-// Health check route
+// ----- Express Routes -----
+
+// Root route renders home page
 app.get('/', (req, res) => {
-  res.send('WhatsApp Bot API is running');
+  res.render('home', { 
+    title: 'WhatsApp Bot Admin - Home',
+    user: req.session.user
+  });
 });
 
-// Health check endpoint (public)
+// Authentication routes
+app.use('/', authRoutes);
+
+// API routes for dashboard
+app.use('/api', apiRoutes);
+
+// Settings routes
+app.use('/settings', settingsRoutes);
+app.use('/api/settings', settingsRoutes);
+
+// Existing routes
+app.use('/api/webhook', webhookRoutes);
+app.use('/api/logs', logsRoutes);
+app.use('/logs', logsUiRoutes);
+
+/**
+ * Health check endpoint for monitoring
+ */
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -149,17 +255,36 @@ app.get('/health', (req, res) => {
 });
 
 // Error handling middleware
-app.use((err, req, res, next) => {
-  logger.error('Express error handler caught error:', err);
-  res.status(500).send('Internal Server Error');
+app.use((req, res, next) => {
+  res.status(404).render('error', {
+    error: {
+      status: 404,
+      message: 'Page Not Found',
+      description: 'The page you are looking for does not exist.'
+    }
+  });
 });
 
-// API routes setup
-app.use('/api/webhook', webhookRoutes);
-app.use('/api/logs', logsRoutes);
-app.use('/logs', logsUiRoutes);
+app.use((err, req, res, next) => {
+  logger.error('Express error handler caught error:', err);
+  res.status(500).render('error', {
+    error: {
+      status: 500,
+      message: 'Internal Server Error',
+      description: process.env.NODE_ENV === 'production' 
+        ? 'Something went wrong on our end. Please try again later.'
+        : err.message
+    }
+  });
+});
 
-// Try different ports in sequence if the preferred port is not available
+/**
+ * Attempt to start the server on the specified port
+ * Returns the port if successful, false if the port is in use
+ * 
+ * @param {number} port - Port to attempt to bind to
+ * @returns {Promise<number|boolean>} - Port number if successful, false if unavailable
+ */
 const startServer = (port) => {
   return new Promise((resolve, reject) => {
     try {
@@ -182,7 +307,10 @@ const startServer = (port) => {
   });
 };
 
-// Start the servers
+/**
+ * Bootstrap the entire application
+ * Initializes WhatsApp client, starts server, and connects to MongoDB
+ */
 async function bootstrap() {
   try {
     // Initialize WhatsApp client
@@ -220,13 +348,43 @@ async function bootstrap() {
     // Connect to MongoDB if configured
     if (process.env.MONGODB_URI) {
       mongoose.connect(process.env.MONGODB_URI)
-        .then(() => logger.info('Connected to MongoDB'))
+        .then(() => {
+          logger.info('Connected to MongoDB');
+          // Create default admin user if no users exist
+          createDefaultAdmin();
+        })
         .catch(err => logger.error('MongoDB connection error:', err));
     }
     
   } catch (error) {
     logger.error('Server bootstrap failed:', error);
     process.exit(1);
+  }
+}
+
+/**
+ * Create a default admin user if no users exist in the system
+ */
+async function createDefaultAdmin() {
+  try {
+    const User = require('./models/User');
+    const userCount = await User.countDocuments();
+    
+    if (userCount === 0) {
+      logger.info('No users found, creating default admin user');
+      
+      const defaultUser = new User({
+        username: 'admin',
+        email: 'admin@example.com',
+        password: process.env.DEFAULT_ADMIN_PASSWORD || 'admin123',
+        role: 'admin'
+      });
+      
+      await defaultUser.save();
+      logger.info('Default admin user created successfully');
+    }
+  } catch (error) {
+    logger.error('Error creating default admin user:', error);
   }
 }
 
@@ -250,8 +408,44 @@ function logEmailEvent(to, subject, status, details) {
     } else if (status === 'ERROR') {
       logger.error(`Email error: ${subject} to ${to} - ${details}`);
     }
-  } catch (error) {
-    console.error('Error writing email log:', error);
+  } catch (e) {
+    console.error('Error logging email event:', e);
+  }
+}
+
+/**
+ * Graceful shutdown handling
+ * Closes database connections and other resources properly
+ */
+process.on('SIGTERM', gracefulShutdown);
+process.on('SIGINT', gracefulShutdown);
+
+function gracefulShutdown() {
+  logger.info('Received shutdown signal, closing connections...');
+  
+  try {
+    // Close MongoDB connection if it exists
+    if (mongoose.connection.readyState) {
+      mongoose.connection.close(() => {
+        logger.info('MongoDB connection closed');
+      });
+    }
+    
+    // Close express server
+    server.close(() => {
+      logger.info('Express server closed');
+      process.exit(0);
+    });
+    
+    // Set a timeout to force exit if graceful shutdown takes too long
+    setTimeout(() => {
+      logger.error('Could not close connections in time, forcefully shutting down');
+      process.exit(1);
+    }, 10000);
+    
+  } catch (e) {
+    logger.error('Error during shutdown:', e);
+    process.exit(1);
   }
 }
 

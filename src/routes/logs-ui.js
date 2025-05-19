@@ -3,6 +3,7 @@ const router = express.Router();
 const path = require('path');
 const fs = require('fs').promises;
 const logger = require('../utils/logger');
+const { isAuthenticated } = require('../middleware/auth');
 
 // Define the scripts needed for the React app - removed Lucide and using development React for better errors
 const scriptTags = `
@@ -60,78 +61,198 @@ const PlayIcon = (props) => SvgIcon({ id: 'play', ...props });
 `;
 }
 
-// Serve the log viewer page
-router.get('/', async (req, res) => {
+// Log files to show in the logs page
+const LOG_FILES = [
+  { name: 'Application Logs', path: 'combined.log' },
+  { name: 'Error Logs', path: 'error.log' },
+  { name: 'Email Logs', path: 'email.log' }
+];
+
+/**
+ * GET /logs - Render logs page using main layout
+ */
+router.get('/', isAuthenticated, async (req, res) => {
   try {
-    // Read the React component
-    const componentPath = path.join(__dirname, '../public/log-viewer-component.js');
-    let componentCode;
-    
-    try {
-      componentCode = await fs.readFile(componentPath, 'utf8');
-    } catch (err) {
-      // Use a default component if file doesn't exist
-      logger.error('Could not load log viewer component:', err);
-      componentCode = `
-// Placeholder component if file doesn't exist
-function LogViewer() {
-  return React.createElement('div', null, 'Loading log viewer...');
-}
-      `;
+    // Check for logs directory and use absolute paths if available
+    const possibleLogPaths = [
+      process.cwd(), // Current directory
+      path.join(process.cwd(), 'logs'), // logs subdirectory
+      path.join(process.cwd(), 'src', 'logs') // src/logs subdirectory
+    ];
+
+    // Filter to available log files only
+    const availableLogs = [];
+
+    for (const file of LOG_FILES) {
+      let found = false;
+
+      // Try each possible location
+      for (const basePath of possibleLogPaths) {
+        const fullPath = path.join(basePath, file.path);
+        try {
+          await fs.access(fullPath);
+          // File exists at this location
+          availableLogs.push({
+            name: file.name,
+            path: fullPath, // Use absolute path
+            displayPath: file.path // Keep original name for display
+          });
+          found = true;
+          break;
+        } catch (err) {
+          // File doesn't exist at this location, continue to next
+        }
+      }
+
+      // If file wasn't found in any location but is one of the main logs, add it anyway
+      if (!found && (file.path === 'combined.log' || file.path === 'error.log')) {
+        availableLogs.push({
+          name: file.name,
+          path: file.path,
+          displayPath: file.path,
+          warning: 'File not found, will be created when logs are generated'
+        });
+      }
     }
-    
-    // Render HTML with React
-    const html = `
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WhatsApp Bot - Log Viewer</title>
-  ${scriptTags}
-  <style>
-    body, html {
-      margin: 0;
-      padding: 0;
-      height: 100%;
-      width: 100%;
-      overflow: hidden;
-    }
-    #root {
-      height: 100%;
-    }
-  </style>
-</head>
-<body>
-  <div id="root"></div>
-  
-  <!-- SVG Icon Definitions -->
-  ${svgIcons}
-  
-  <script>
-    // Utility function for class names
-    const cn = (...classes) => classes.filter(Boolean).join(' ');
-    
-    ${getSvgIconScript()}
-    
-    // --- BEGIN COMPONENT CODE ---
-    ${componentCode.replace(/const cn = \(.*?\) => .*?;/gs, '')}
-    // --- END COMPONENT CODE ---
-    
-    // Initialize the app
-    document.addEventListener('DOMContentLoaded', function() {
-      const root = ReactDOM.createRoot(document.getElementById('root'));
-      root.render(React.createElement(LogViewer));
+
+    // Get the latest logs from each file (last 50 lines)
+    const logs = await Promise.all(
+      availableLogs.map(async (file) => {
+        try {
+          const content = await fs.readFile(file.path, 'utf8');
+          const lines = content.split('\n').filter(Boolean).slice(-50);
+          return {
+            name: file.name,
+            path: file.displayPath || file.path, // Use display path for frontend
+            lines: lines
+          };
+        } catch (err) {
+          logger.warn(`Log file ${file.path} not available: ${err.message}`);
+          return {
+            name: file.name,
+            path: file.displayPath || file.path,
+            lines: [],
+            warning: file.warning || `Log file not found or empty. It will be created when events occur.`
+          };
+        }
+      })
+    );
+
+    res.render('logs', {
+      title: 'Logs - WhatsApp Bot Admin',
+      user: req.session.user,
+      activeTab: 'logs',
+      logs: logs
     });
-  </script>
-</body>
-</html>
-    `;
-    
-    res.send(html);
   } catch (error) {
     logger.error('Error serving log viewer:', error);
-    res.status(500).send('Error loading log viewer');
+    res.status(500).render('error', {
+      error: {
+        status: 500,
+        message: 'Failed to load logs',
+        description: error.message
+      }
+    });
+  }
+});
+
+/**
+ * GET /logs/api/:file - API endpoint to get log data
+ */
+router.get('/api/:file', isAuthenticated, async (req, res) => {
+  const fileName = req.params.file;
+  const lines = parseInt(req.query.lines) || 100;
+  
+  // Validate filename to prevent directory traversal
+  const validFiles = LOG_FILES.map(file => file.path);
+  if (!validFiles.includes(fileName)) {
+    return res.status(400).json({ error: 'Invalid log file' });
+  }
+  
+  try {
+    // Check if file exists
+    try {
+      await fs.access(fileName);
+    } catch (err) {
+      // File doesn't exist, try in logs directory
+      const possiblePaths = [
+        path.join(process.cwd(), 'logs', fileName),
+        path.join(process.cwd(), 'src', 'logs', fileName)
+      ];
+      
+      let found = false;
+      for (const possiblePath of possiblePaths) {
+        try {
+          await fs.access(possiblePath);
+          // File found, replace fileName with absolute path
+          fileName = possiblePath;
+          found = true;
+          break;
+        } catch (err) {
+          // Continue to next path
+        }
+      }
+      
+      if (!found) {
+        // Return empty log if file doesn't exist
+        logger.warn(`Log file ${fileName} not found in any location, returning empty log`);
+        return res.json({
+          file: fileName,
+          lines: [],
+          warning: `Log file doesn't exist yet. It will be created when relevant events occur.`
+        });
+      }
+    }
+    
+    const content = await fs.readFile(fileName, 'utf8');
+    const logLines = content.split('\n').filter(Boolean).slice(-lines);
+    
+    // Parse log lines into structured data if possible
+    const parsedLines = logLines.map(line => {
+      try {
+        // Try to parse as JSON first
+        if (line.includes('{"service":')) {
+          const parts = line.split(' ');
+          const timestamp = parts[0];
+          const message = parts.slice(1).join(' ');
+          const jsonStart = message.indexOf('{');
+          
+          if (jsonStart !== -1) {
+            const messageText = message.substring(0, jsonStart).trim();
+            const jsonData = JSON.parse(message.substring(jsonStart));
+            
+            return {
+              timestamp,
+              message: messageText,
+              data: jsonData,
+              raw: line
+            };
+          }
+        }
+        
+        // Fall back to simple parsing
+        if (line.includes(' - ')) {
+          const [timestamp, message] = line.split(' - ');
+          return {
+            timestamp,
+            message,
+            raw: line
+          };
+        }
+        
+        return { raw: line };
+      } catch (err) {
+        return { raw: line };
+      }
+    });
+    
+    res.json({
+      file: fileName,
+      lines: parsedLines
+    });
+  } catch (error) {
+    logger.error(`Error reading log file ${fileName}:`, error);
+    res.status(500).json({ error: `Failed to read log file: ${error.message}` });
   }
 });
 

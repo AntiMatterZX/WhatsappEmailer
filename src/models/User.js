@@ -1,100 +1,78 @@
+/**
+ * User model for authentication
+ * Stores user credentials and roles for accessing the application
+ */
+
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
-const userSchema = new mongoose.Schema({
+const UserSchema = new mongoose.Schema({
   username: {
     type: String,
     required: true,
     unique: true,
-    trim: true,
-    minlength: 3
+    trim: true
+  },
+  password: {
+    type: String,
+    required: true
   },
   email: {
     type: String,
     required: true,
     unique: true,
-    trim: true,
-    lowercase: true
-  },
-  password: {
-    type: String,
-    required: true,
-    minlength: 6
+    trim: true
   },
   role: {
     type: String,
-    enum: ['admin', 'moderator', 'user'],
-    default: 'user'
+    enum: ['admin', 'user', 'viewer'],
+    default: 'viewer'
   },
   isActive: {
     type: Boolean,
     default: true
   },
-  lastLogin: Date,
-  permissions: [{
-    type: String,
-    enum: [
-      'manage_groups',
-      'view_messages',
-      'manage_rules',
-      'manage_users',
-      'view_logs',
-      'manage_webhooks'
-    ]
-  }],
-  createdAt: {
+  lastLogin: {
     type: Date,
-    default: Date.now
+    default: null
   },
-  updatedAt: {
+  createdAt: {
     type: Date,
     default: Date.now
   }
 });
 
-// Hash password before saving
-userSchema.pre('save', async function(next) {
+/**
+ * Password hash middleware
+ * Automatically hashes the password before saving
+ */
+UserSchema.pre('save', async function(next) {
   if (!this.isModified('password')) return next();
-  
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
-    this.updatedAt = new Date();
     next();
   } catch (error) {
     next(error);
   }
 });
 
-// Method to compare password
-userSchema.methods.comparePassword = async function(candidatePassword) {
+/**
+ * Helper method for validating user's password
+ * @param {string} candidatePassword - The plain text password to validate
+ * @returns {Promise<boolean>} - Returns true if passwords match
+ */
+UserSchema.methods.comparePassword = async function(candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-// Method to get user's permissions based on role
-userSchema.methods.getPermissions = function() {
-  const rolePermissions = {
-    admin: [
-      'manage_groups',
-      'view_messages',
-      'manage_rules',
-      'manage_users',
-      'view_logs',
-      'manage_webhooks'
-    ],
-    moderator: [
-      'view_messages',
-      'manage_rules',
-      'view_logs'
-    ],
-    user: [
-      'view_messages'
-    ]
-  };
-
-  return [...new Set([...rolePermissions[this.role], ...this.permissions])];
+/**
+ * Helper method to prevent password from being sent in API responses
+ */
+UserSchema.methods.toJSON = function() {
+  const obj = this.toObject();
+  delete obj.password;
+  return obj;
 };
 
-const User = mongoose.model('User', userSchema);
-
-module.exports = User; 
+module.exports = mongoose.model('User', UserSchema); 
