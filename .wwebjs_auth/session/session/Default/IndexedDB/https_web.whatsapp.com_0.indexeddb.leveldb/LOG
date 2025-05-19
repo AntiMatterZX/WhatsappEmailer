@@ -217,3 +217,27 @@
 2025/05/19-14:06:57.168 8b58 compacted to: files[ 0 2 1 0 0 0 0 ]
 2025/05/19-14:06:57.169 8b58 Delete type=2 #1063
 2025/05/19-14:06:57.169 8b58 Delete type=2 #1065
+2025/05/19-14:11:09.561 3504 Level-0 table #1069: started
+2025/05/19-14:11:09.573 3504 Level-0 table #1069: 772259 bytes OK
+2025/05/19-14:11:09.573 3504 Delete type=0 #1064
+2025/05/19-14:11:09.574 3504 Manual compaction at level-0 from ' t\x01\x00\x00\x00' @ 72057594037927935 : 1 .. ' u\x01\x00\x00\x00' @ 0 : 0; will stop at ' u\x01\x00\x00\x05' @ 1138175 : 1
+2025/05/19-14:11:09.574 3504 Compacting 1@0 + 2@1 files
+2025/05/19-14:11:09.657 3504 Generated table #1070@0: 102822 keys, 2272372 bytes
+2025/05/19-14:11:09.669 3504 Generated table #1071@0: 17011 keys, 442228 bytes
+2025/05/19-14:11:09.669 3504 Compacted 1@0 + 2@1 files => 2714600 bytes
+2025/05/19-14:11:09.669 3504 compacted to: files[ 0 2 1 0 0 0 0 ]
+2025/05/19-14:11:09.669 3504 Delete type=2 #1069
+2025/05/19-14:11:09.670 3504 Manual compaction at level-0 from ' u\x01\x00\x00\x05' @ 1138175 : 1 .. ' u\x01\x00\x00\x00' @ 0 : 0; will stop at (end)
+2025/05/19-14:11:09.671 3504 Level-0 table #1073: started
+2025/05/19-14:11:09.676 3504 Level-0 table #1073: 255 bytes OK
+2025/05/19-14:11:09.677 3504 Delete type=2 #1066
+2025/05/19-14:11:09.677 3504 Delete type=2 #1067
+2025/05/19-14:11:09.677 3504 Delete type=0 #1068
+2025/05/19-14:11:09.678 3504 Manual compaction at level-0 from ' u\x01\x00\x00\x00' @ 72057594037927935 : 1 .. ' v\x01\x00\x00\x00' @ 0 : 0; will stop at ' u\x01\x00\x00\x05' @ 1138216 : 0
+2025/05/19-14:11:09.678 3504 Compacting 1@0 + 2@1 files
+2025/05/19-14:11:09.755 3504 Generated table #1074@0: 102822 keys, 2272367 bytes
+2025/05/19-14:11:09.766 3504 Generated table #1075@0: 17009 keys, 442352 bytes
+2025/05/19-14:11:09.766 3504 Compacted 1@0 + 2@1 files => 2714719 bytes
+2025/05/19-14:11:09.766 3504 compacted to: files[ 0 2 1 0 0 0 0 ]
+2025/05/19-14:11:09.766 3504 Delete type=2 #1073
+2025/05/19-14:11:09.767 3504 Manual compaction at level-0 from ' u\x01\x00\x00\x05' @ 1138216 : 0 .. ' v\x01\x00\x00\x00' @ 0 : 0; will stop at (end)

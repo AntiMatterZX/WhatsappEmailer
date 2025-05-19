@@ -9,3 +9,6 @@
 [0519/140540.175:INFO:CONSOLE(0)] "Error with Permissions-Policy header: Unrecognized feature: 'private-state-token-redemption'.", source:  (0)
 [0519/140540.175:INFO:CONSOLE(0)] "Error with Permissions-Policy header: Unrecognized feature: 'unload'.", source:  (0)
 [0519/140540.175:INFO:CONSOLE(0)] "Error with Permissions-Policy header: Unrecognized feature: 'window-management'.", source:  (0)
+[0519/141109.528:INFO:CONSOLE(1265)] "Failed to parse video contentType: video/mp4; codecs=avc1.42000a", source: https://static.whatsapp.net/rsrc.php/v4i81i4/y3/l/rt/Gq0bWL5BYB9.js (1265)
+[0519/141109.528:INFO:CONSOLE(1265)] "Failed to parse video contentType: video/mp4; codecs=hev1.1.6.L93.B0", source: https://static.whatsapp.net/rsrc.php/v4i81i4/y3/l/rt/Gq0bWL5BYB9.js (1265)
+[0519/141114.788:INFO:CONSOLE(157)] "Event handler of 'x-storagemutated-1' event must be added on the initial evaluation of worker script.", source: https://static.whatsapp.net/rsrc.php/v4/yH/r/Y3AVaQRyd1k.js (157)
