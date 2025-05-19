@@ -798,3 +798,39 @@
 {"level":"info","message":"Matched rule(s) [HELPDESK] for group 'Test' (school: [object Object]) on message: '[Helpdesk] Yo' from 919004630539@c.us","service":"whatsapp-bot","timestamp":"2025-05-19 14:23:11"}
 {"level":"info","message":"Sending email for group 'Test' (school: [object Object]) to varunbhole2@gmail.com for message: '[Helpdesk] Yo'","service":"whatsapp-bot","timestamp":"2025-05-19 14:23:11"}
 {"level":"info","message":"Sent email for group 'Test' (school: Test) to varunbhole2@gmail.com with subject 'Test - HELPDESK #1747644792819-8636'","service":"whatsapp-bot","timestamp":"2025-05-19 14:23:12"}
+{"level":"info","message":"BullMQ message queue initialized","service":"whatsapp-bot","timestamp":"2025-05-19 15:04:05"}
+{"level":"info","message":"EMAIL worker is being created and listening for EMAIL jobs","service":"whatsapp-bot","timestamp":"2025-05-19 15:04:05"}
+{"level":"info","message":"WhatsApp Bot server started on port 3000","service":"whatsapp-bot","timestamp":"2025-05-19 15:04:05"}
+{"level":"info","message":"⚡ WhatsApp Bot API is ready (development mode)  - PORT: 3000","service":"whatsapp-bot","timestamp":"2025-05-19 15:04:05"}
+{"level":"info","message":"Redis connected successfully","service":"whatsapp-bot","timestamp":"2025-05-19 15:04:05"}
+{"level":"info","message":"Redis CONFIG SET not supported, but warnings have been suppressed","service":"whatsapp-bot","timestamp":"2025-05-19 15:04:05"}
+{"level":"info","message":"Connected to MongoDB","service":"whatsapp-bot","timestamp":"2025-05-19 15:04:05"}
+{"level":"info","message":"WhatsApp client authenticated","service":"whatsapp-bot","timestamp":"2025-05-19 15:04:13"}
+{"level":"info","message":"WhatsApp client is ready!","service":"whatsapp-bot","timestamp":"2025-05-19 15:04:13"}
+{"level":"info","message":"Matched rule(s) [HELPDESK] for group 'Test' (school: Test) on message: '[Helpdesk] Yo' from 919004630539@c.us","service":"whatsapp-bot","timestamp":"2025-05-19 15:04:14"}
+{"level":"info","message":"Sending email for group 'Test' (school: [object Object]) to varunbhole2@gmail.com for message: '[Helpdesk] Yo'","service":"whatsapp-bot","timestamp":"2025-05-19 15:04:14"}
+{"level":"info","message":"Sent email for group 'Test' (school: Test) to varunbhole2@gmail.com with subject 'Test - HELPDESK #1747647254107-7670'","service":"whatsapp-bot","timestamp":"2025-05-19 15:04:15"}
+{"level":"info","message":"Matched rule(s) [HELPDESK] for group 'Test' (school: Test) on message: '[Helpdesk] Yo' from 919004630539@c.us","service":"whatsapp-bot","timestamp":"2025-05-19 15:04:31"}
+{"level":"info","message":"Media message with 'helpdesk' caption found for group 'Test' (school: Test) from 919004630539@c.us","service":"whatsapp-bot","timestamp":"2025-05-19 15:04:31"}
+{"level":"info","message":"Media downloaded and prepared for email:  GauriGawade_Resume.pdf","service":"whatsapp-bot","timestamp":"2025-05-19 15:04:31"}
+{"level":"info","message":"Sending email for group 'Test' (school: [object Object]) to varunbhole2@gmail.com for message: '[Helpdesk] Yo'","service":"whatsapp-bot","timestamp":"2025-05-19 15:04:31"}
+{"level":"info","message":"Using direct content for 1 attachment(s) in email for group 'Test'.","service":"whatsapp-bot","timestamp":"2025-05-19 15:04:31"}
+{"level":"info","message":"Sent email for group 'Test' (school: Test) to varunbhole2@gmail.com with subject 'Test - HELPDESK #1747647271761-322'","service":"whatsapp-bot","timestamp":"2025-05-19 15:04:32"}
+{"level":"info","message":"BullMQ message queue initialized","service":"whatsapp-bot","timestamp":"2025-05-19 15:18:35"}
+{"level":"info","message":"EMAIL worker is being created and listening for EMAIL jobs","service":"whatsapp-bot","timestamp":"2025-05-19 15:18:35"}
+{"level":"info","message":"WhatsApp Bot server started on port 3000","service":"whatsapp-bot","timestamp":"2025-05-19 15:18:35"}
+{"level":"info","message":"⚡ WhatsApp Bot API is ready (development mode)  - PORT: 3000","service":"whatsapp-bot","timestamp":"2025-05-19 15:18:35"}
+{"level":"info","message":"Redis connected successfully","service":"whatsapp-bot","timestamp":"2025-05-19 15:18:35"}
+{"level":"info","message":"Redis CONFIG SET not supported, but warnings have been suppressed","service":"whatsapp-bot","timestamp":"2025-05-19 15:18:35"}
+{"level":"info","message":"Connected to MongoDB","service":"whatsapp-bot","timestamp":"2025-05-19 15:18:35"}
+{"level":"info","message":"WhatsApp client authenticated","service":"whatsapp-bot","timestamp":"2025-05-19 15:18:42"}
+{"level":"info","message":"WhatsApp client is ready!","service":"whatsapp-bot","timestamp":"2025-05-19 15:18:43"}
+{"level":"info","message":"Matched rule(s) [HELPDESK] for group 'Test' (school: Test) on message: '[Helpdesk] Yo' from Varun Bhole","service":"whatsapp-bot","timestamp":"2025-05-19 15:18:55"}
+{"level":"info","message":"Sending email for group 'Test' (school: [object Object]) to varunbhole2@gmail.com for message: '[Helpdesk] Yo'","service":"whatsapp-bot","timestamp":"2025-05-19 15:18:55"}
+{"level":"info","message":"Sent email for group 'Test' (school: Test) to varunbhole2@gmail.com with subject 'Test - HELPDESK #1747648135956-8977'","service":"whatsapp-bot","timestamp":"2025-05-19 15:18:57"}
+{"level":"info","message":"Matched rule(s) [HELPDESK] for group 'Test' (school: Test) on message: '[Helpdesk] Yo' from Varun Bhole","service":"whatsapp-bot","timestamp":"2025-05-19 15:19:01"}
+{"level":"info","message":"Media message with 'helpdesk' caption found for group 'Test' (school: Test) from Varun Bhole","service":"whatsapp-bot","timestamp":"2025-05-19 15:19:01"}
+{"level":"info","message":"Media downloaded and prepared for email:  GauriGawade_Resume.pdf","service":"whatsapp-bot","timestamp":"2025-05-19 15:19:01"}
+{"level":"info","message":"Sending email for group 'Test' (school: [object Object]) to varunbhole2@gmail.com for message: '[Helpdesk] Yo'","service":"whatsapp-bot","timestamp":"2025-05-19 15:19:01"}
+{"level":"info","message":"Using direct content for 1 attachment(s) in email for group 'Test'.","service":"whatsapp-bot","timestamp":"2025-05-19 15:19:01"}
+{"level":"info","message":"Sent email for group 'Test' (school: Test) to varunbhole2@gmail.com with subject 'Test - HELPDESK #1747648141462-7861'","service":"whatsapp-bot","timestamp":"2025-05-19 15:19:02"}

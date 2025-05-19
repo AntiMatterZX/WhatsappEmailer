@@ -4,6 +4,7 @@ const Group = require('../models/Group');
 const logger = require('../utils/logger');
 const { extractSchoolName, generateUniqueEmailId, formatEmailSubject } = require('../utils/helpers');
 const path = require('path');
+const generateEmailTemplate = require('../templates/emailTemplate');
 
 // Initialize email transporter
 const transporter = nodemailer.createTransport({
@@ -27,7 +28,23 @@ class MessageProcessor {
       let group = await Group.findOne({ groupId: msg.from });
       const schoolNameExtract = extractSchoolName(group ? group.name : msg.from);
       const schoolName = schoolNameExtract.school || schoolNameExtract; // Handle both object and string return
-      const sender = msg.author || msg.from;
+      // Improved sender logic: use contact name, then pushname, then number, then fallback
+      let sender;
+      try {
+        const contact = await msg.getContact();
+        if (contact.name) {
+          sender = contact.name;
+        } else if (contact.pushname) {
+          sender = contact.pushname;
+        } else if (contact.number) {
+          sender = contact.number;
+        } else {
+          sender = msg.author || msg.from;
+        }
+      } catch (e) {
+        sender = msg.author || msg.from;
+        logger.warn(`Could not fetch contact info for sender: ${e.message}`);
+      }
       // If group not found, auto-create it
       if (!group) {
         group = new Group({
@@ -205,30 +222,42 @@ class MessageProcessor {
     const uniqueId = generateUniqueEmailId();
 
     let nodemailerAttachments = [];
+    let attachmentFilenames = [];
+    
     // Prioritize newly downloaded media if available on the message object
     if (message.emailAttachments && message.emailAttachments.length > 0) {
         nodemailerAttachments = message.emailAttachments;
+        attachmentFilenames = message.emailAttachments.map(att => att.filename || 'attachment');
         logger.info(`Using direct content for ${nodemailerAttachments.length} attachment(s) in email for group '${group.name}'.`);
     } else if (message.type === 'HELPDESK' && Array.isArray(message.attachments) && message.attachments.length > 0) {
-      // Fallback to existing file path logic (consider if this is still needed or how it's populated)
+      // Fallback to existing file path logic
       logger.warn(`Using legacy attachment path logic in sendEmail for group '${group.name}'. Ensure paths are valid.`);
+      
       nodemailerAttachments = message.attachments.map(filePath => {
-        // This assumes filePath is a relative path from project root, e.g., 'uploads/file.pdf'
-        // Or an absolute path. The original path.join(__dirname, '../../', filePath) suggests relative to dist/services.
-        // If files are saved temporarily, ensure the path is correct.
-        const fullPath = path.resolve(filePath); // Attempt to resolve, adjust if paths are relative to a specific base
+        const filename = path.basename(filePath);
+        attachmentFilenames.push(filename);
+        
         return {
-          filename: path.basename(filePath),
-          path: fullPath // nodemailer will try to read from this path
+          filename: filename,
+          path: path.resolve(filePath)
         };
       });
     }
-    
-    const mailContent = `\nSchool: ${schoolName}\nGroup: ${group.name}\nSender: ${message.sender}\nMessage: ${message.content || '(No text caption, see attachment(s))'}\nTime: ${message.createdAt}\n      `.trim();
+
+    // Generate email HTML using our new template
+    const htmlContent = generateEmailTemplate({
+      schoolName: schoolName,
+      groupName: group.name,
+      sender: message.sender,
+      content: message.content || "(No message content)",
+      timestamp: message.createdAt || new Date(),
+      uniqueId: uniqueId,
+      attachments: attachmentFilenames
+    });
 
     const mailOptions = {
       from: `"WhatsApp Bot" <${process.env.SMTP_USER}>`,
-      to: process.env.HELPDESK_EMAIL, // Assuming config might override this, but process.env.HELPDESK_EMAIL is default
+      to: process.env.HELPDESK_EMAIL,
       subject: formatEmailSubject(schoolName, message.type || 'NOTIFICATION'),
       messageId: `<${uniqueId}@whatsapp-bot.local>`,
       references: [],
@@ -239,19 +268,18 @@ class MessageProcessor {
         'X-Group-Name': group.name,
         'X-Message-Type': message.type || 'NOTIFICATION'
       },
-      text: mailContent,
-      html: `<p><b>School:</b> ${schoolName}<br><b>Group:</b> ${group.name}<br><b>Sender:</b> ${message.sender}<br><b>Message:</b> ${message.content || '(No text caption, see attachment(s))'}<br><b>Time:</b> ${message.createdAt}</p>`,
+      html: htmlContent,
+      // Generate plain text version from the HTML content
+      text: `School: ${schoolName}\nGroup: ${group.name}\nSender: ${message.sender}\nMessage: ${message.content || "(No message content)"}\nTime: ${message.createdAt ? new Date(message.createdAt).toLocaleString() : new Date().toLocaleString()}\n\n${attachmentFilenames.length ? `Attachments: ${attachmentFilenames.join(', ')}\n` : ''}`,
       attachments: nodemailerAttachments
     };
 
-    // Allow config to override recipient if specified (e.g. action.config.get('recipientEmail'))
+    // Allow config to override recipient if specified
     if (config && typeof config.get === 'function' && config.get('recipientEmail')) {
       mailOptions.to = config.get('recipientEmail');
     }
 
-
     const info = await transporter.sendMail(mailOptions);
-
     logger.info(`Sent email for group '${group.name}' (school: ${schoolName}) to ${mailOptions.to} with subject '${mailOptions.subject}'`);
   }
 
