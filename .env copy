@@ -1,0 +1,16 @@
+WHATSAPP_SESSION_PATH=./sessions
+MONGODB_URI=mongodb+srv://myliquidata:liquidata@whatsapp-bot.qlrc39l.mongodb.net/?retryWrites=true&w=majority&appName=whatsapp-bot
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=465
+SMTP_USER=myliquidata@gmail.com
+SMTP_PASS=ylursdnofajloxpn
+PORT=3000
+NODE_ENV=development
+ADMIN_PHONE=9004630539
+
+# WhatsApp Configuration
+WHATSAPP_SESSION_PATH=.wwebjs_auth/session
+
+# Helpdesk Configuration
+# HELPDESK_EMAIL=varunbhole@gmail.com
+JWT_SECRET=fdd6f5aedd029a105d7dddf2dc1385471c780c69bbbfabdf3757bb8e16877d57

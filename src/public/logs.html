@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Bot Log Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            color: #333;
+            border-bottom: 2px solid #ddd;
+            padding-bottom: 10px;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .log-select {
+            margin-bottom: 20px;
+        }
+        .log-select select {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            width: 200px;
+        }
+        .log-container {
+            background-color: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            height: 500px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px;
+            border-bottom: 1px solid #eee;
+        }
+        .log-controls {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+        }
+        .log-controls button {
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+        .log-controls button:hover {
+            background-color: #45a049;
+        }
+        .pagination {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+        }
+        .error {
+            color: #D32F2F;
+            font-weight: bold;
+        }
+        .warn {
+            color: #FFA000;
+        }
+        .info {
+            color: #1976D2;
+        }
+        .debug {
+            color: #7B1FA2;
+        }
+        .realtime-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #ccc;
+            margin-left: 10px;
+        }
+        .realtime-on {
+            background-color: #4CAF50;
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>WhatsApp Bot Log Viewer</h1>
+        
+        <div class="log-select">
+            <select id="logFile">
+                <option value="combined.log">Combined Log</option>
+                <option value="error.log">Error Log</option>
+                <option value="monitoring.log">Monitoring Log</option>
+                <option value="routes.log">Routes Log</option>
+                <option value="webhook.log">Webhook Log</option>
+            </select>
+            <span>Realtime: <span id="realtimeIndicator" class="realtime-indicator"></span></span>
+        </div>
+        
+        <div class="log-controls">
+            <button id="refreshBtn">Refresh</button>
+            <button id="clearBtn">Clear Log</button>
+            <button id="realtimeBtn">Start Realtime</button>
+            <span>Lines: <select id="lineLimit">
+                <option value="50">50</option>
+                <option value="100" selected>100</option>
+                <option value="200">200</option>
+                <option value="500">500</option>
+            </select></span>
+            <span>Page: <span id="pageInfo">1 of 1</span></span>
+        </div>
+        
+        <div class="log-container" id="logContent"></div>
+        
+        <div class="pagination">
+            <button id="prevPage">Previous Page</button>
+            <button id="nextPage">Next Page</button>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const logFileSelect = document.getElementById('logFile');
+        const logContent = document.getElementById('logContent');
+        const refreshBtn = document.getElementById('refreshBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const realtimeBtn = document.getElementById('realtimeBtn');
+        const realtimeIndicator = document.getElementById('realtimeIndicator');
+        const lineLimit = document.getElementById('lineLimit');
+        const pageInfo = document.getElementById('pageInfo');
+        const prevPageBtn = document.getElementById('prevPage');
+        const nextPageBtn = document.getElementById('nextPage');
+        
+        // State variables
+        let currentPage = 1;
+        let totalPages = 1;
+        let isRealtime = false;
+        let eventSource = null;
+        
+        // Functions
+        function fetchLogs(page = 1) {
+            const selectedLog = logFileSelect.value;
+            const limit = parseInt(lineLimit.value);
+            
+            fetch(`/api/logs/${selectedLog}?page=${page}&limit=${limit}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    displayLogs(data.lines);
+                    totalPages = data.totalPages;
+                    currentPage = data.page;
+                    updatePagination();
+                })
+                .catch(error => {
+                    logContent.innerHTML = `<div class="log-entry error">Error fetching logs: ${error.message}</div>`;
+                });
+        }
+        
+        function clearLogs() {
+            const selectedLog = logFileSelect.value;
+            
+            fetch(`/api/logs/${selectedLog}/clear`, {
+                method: 'POST'
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    fetchLogs(1);
+                })
+                .catch(error => {
+                    logContent.innerHTML = `<div class="log-entry error">Error clearing logs: ${error.message}</div>`;
+                });
+        }
+        
+        function toggleRealtime() {
+            if (isRealtime) {
+                stopRealtime();
+                realtimeBtn.textContent = 'Start Realtime';
+                realtimeIndicator.classList.remove('realtime-on');
+            } else {
+                startRealtime();
+                realtimeBtn.textContent = 'Stop Realtime';
+                realtimeIndicator.classList.add('realtime-on');
+            }
+            isRealtime = !isRealtime;
+        }
+        
+        function startRealtime() {
+            const selectedLog = logFileSelect.value;
+            
+            // Close existing EventSource if any
+            if (eventSource) {
+                eventSource.close();
+            }
+            
+            // Clear the log content first
+            logContent.innerHTML = '';
+            
+            // Create new EventSource
+            eventSource = new EventSource(`/api/logs/${selectedLog}/stream`);
+            
+            eventSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                
+                // Create a new log entry element
+                const logEntry = document.createElement('div');
+                logEntry.className = 'log-entry';
+                
+                if (data.level) {
+                    logEntry.classList.add(data.level.toLowerCase());
+                    logEntry.textContent = `[${data.timestamp || new Date().toISOString()}] ${data.level.toUpperCase()}: ${data.message}`;
+                } else {
+                    logEntry.textContent = data.message || JSON.stringify(data);
+                }
+                
+                // Add to the top of the log container
+                logContent.insertBefore(logEntry, logContent.firstChild);
+                
+                // Trim if too many entries
+                if (logContent.children.length > 1000) {
+                    logContent.removeChild(logContent.lastChild);
+                }
+            };
+            
+            eventSource.onerror = function(error) {
+                console.error('EventSource failed:', error);
+                stopRealtime();
+                isRealtime = false;
+                realtimeBtn.textContent = 'Start Realtime';
+                realtimeIndicator.classList.remove('realtime-on');
+            };
+        }
+        
+        function stopRealtime() {
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+        }
+        
+        function displayLogs(logs) {
+            logContent.innerHTML = '';
+            
+            if (!logs || logs.length === 0) {
+                logContent.innerHTML = '<div class="log-entry">No logs found</div>';
+                return;
+            }
+            
+            logs.forEach(logLine => {
+                const logEntry = document.createElement('div');
+                logEntry.className = 'log-entry';
+                
+                try {
+                    // Try to parse JSON if it's a JSON string
+                    const logData = typeof logLine === 'string' ? JSON.parse(logLine) : logLine;
+                    
+                    if (logData.level) {
+                        logEntry.classList.add(logData.level.toLowerCase());
+                        logEntry.textContent = `[${logData.timestamp || ''}] ${logData.level.toUpperCase()}: ${logData.message}`;
+                        
+                        // Add metadata if any
+                        if (logData.service || logData.meta) {
+                            const meta = logData.meta || {};
+                            if (logData.service) meta.service = logData.service;
+                            
+                            if (Object.keys(meta).length > 0) {
+                                logEntry.textContent += ` ${JSON.stringify(meta)}`;
+                            }
+                        }
+                    } else {
+                        logEntry.textContent = typeof logData === 'string' ? logData : JSON.stringify(logData);
+                    }
+                } catch (e) {
+                    // Not JSON, display as is
+                    logEntry.textContent = logLine;
+                }
+                
+                logContent.appendChild(logEntry);
+            });
+        }
+        
+        function updatePagination() {
+            pageInfo.textContent = `${currentPage} of ${totalPages}`;
+            prevPageBtn.disabled = currentPage <= 1;
+            nextPageBtn.disabled = currentPage >= totalPages;
+        }
+        
+        // Event Listeners
+        logFileSelect.addEventListener('change', () => {
+            if (isRealtime) {
+                stopRealtime();
+                startRealtime();
+            } else {
+                currentPage = 1;
+                fetchLogs(currentPage);
+            }
+        });
+        
+        refreshBtn.addEventListener('click', () => {
+            if (!isRealtime) {
+                fetchLogs(currentPage);
+            }
+        });
+        
+        clearBtn.addEventListener('click', clearLogs);
+        
+        realtimeBtn.addEventListener('click', toggleRealtime);
+        
+        lineLimit.addEventListener('change', () => {
+            if (!isRealtime) {
+                currentPage = 1;
+                fetchLogs(currentPage);
+            }
+        });
+        
+        prevPageBtn.addEventListener('click', () => {
+            if (currentPage > 1 && !isRealtime) {
+                currentPage--;
+                fetchLogs(currentPage);
+            }
+        });
+        
+        nextPageBtn.addEventListener('click', () => {
+            if (currentPage < totalPages && !isRealtime) {
+                currentPage++;
+                fetchLogs(currentPage);
+            }
+        });
+        
+        // Initialize
+        fetchLogs();
+    </script>
+</body>
+</html> 

@@ -1,0 +1,45 @@
+{
+  "name": "whatsapp-bot",
+  "version": "1.0.0",
+  "description": "A WhatsApp bot for monitoring group chats and automating workflows",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test": "jest",
+    "start:verbose": "set LOG_LEVEL=verbose&& node src/index.js",
+    "start:debug": "set LOG_LEVEL=debug&& node src/index.js",
+    "start:info": "set LOG_LEVEL=info&& node src/index.js",
+    "start:warn": "set LOG_LEVEL=warn&& node src/index.js",
+    "start:error": "set LOG_LEVEL=error&& node src/index.js",
+    "start:quiet": "set LOG_LEVEL=error&& set NODE_ENV=production&& node src/index.js"
+  },
+  "dependencies": {
+    "@tailwindcss/forms": "^0.5.10",
+    "axios": "^1.9.0",
+    "bull": "^4.12.0",
+    "bullmq": "^4.18.2",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.5.0",
+    "express-validator": "^7.0.1",
+    "ioredis": "^5.3.2",
+    "mongoose": "^8.15.0",
+    "nodemailer": "^6.10.1",
+    "prom-client": "^15.0.0",
+    "qrcode-terminal": "^0.12.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
+    "uuid": "^11.1.0",
+    "whatsapp-web.js": "^1.23.0",
+    "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "nodemon": "^3.0.2",
+    "supertest": "^6.3.3"
+  }
+}

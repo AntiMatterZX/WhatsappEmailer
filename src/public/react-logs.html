@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Bot - React Log Viewer</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React and ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://unpkg.com/lucide-react@latest"></script>
+    
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+        }
+        #root {
+            height: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <!-- Load our React component -->
+    <script type="text/babel" data-type="module">
+        // Import Lucide React icons
+        const { 
+            Search, Filter, User, Zap, MoreVertical, RefreshCw, 
+            AlertTriangle, XCircle, Play 
+        } = window.LucideReact;
+
+        // Utility function for class names
+        const cn = (...classes) => classes.filter(Boolean).join(' ');
+
+        // Typing for our logs from whatsapp-bot system
+        const LOG_LEVELS = {
+            ERROR: "ERROR",
+            WARN: "WARNING", 
+            INFO: "INFO",
+            DEBUG: "DEBUG"
+        };
+
+        // HTTP methods we might see in logs
+        const HTTP_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH"];
+
+        // Convert WhatsApp bot log format to the component's format
+        function convertLogFormat(rawLog) {
+            try {
+                // If it's already an object (from SSE), use it directly
+                const logData = typeof rawLog === 'string' ? JSON.parse(rawLog) : rawLog;
+                
+                // Extract HTTP method and path if message contains them
+                let method = null;
+                let path = null;
+                let host = "whatsapp-bot";
+                let statusCode = 200;
+                
+                // Try to extract HTTP information from message
+                if (logData.message) {
+                    // Check for HTTP method patterns in the message
+                    for (const m of HTTP_METHODS) {
+                        if (logData.message.includes(` ${m} `)) {
+                            method = m;
+                            
+                            // Try to extract path
+                            const parts = logData.message.split(` ${m} `);
+                            if (parts.length > 1) {
+                                const pathMatch = parts[1].match(/([^\s]+)/);
+                                if (pathMatch) path = pathMatch[0];
+                            }
+                            
+                            break;
+                        }
+                    }
+                    
+                    // Check for status codes
+                    const statusMatch = logData.message.match(/status(?:Code)?: ?(\d{3})/i);
+                    if (statusMatch) {
+                        statusCode = parseInt(statusMatch[1]);
+                    }
+                }
+                
+                // Default method if none found
+                if (!method) {
+                    method = "INFO";
+                }
+                
+                // Default path if none found
+                if (!path) {
+                    if (logData.message?.includes('WhatsApp')) {
+                        path = "/whatsapp";
+                    } else if (logData.message?.includes('MongoDB')) {
+                        path = "/database";
+                    } else if (logData.message?.includes('Redis')) {
+                        path = "/cache";
+                    } else {
+                        path = "/system";
+                    }
+                }
+                
+                // Map level
+                let level = LOG_LEVELS.INFO;
+                if (logData.level) {
+                    const upperLevel = logData.level.toUpperCase();
+                    if (upperLevel === 'ERROR') level = LOG_LEVELS.ERROR;
+                    else if (upperLevel === 'WARN' || upperLevel === 'WARNING') level = LOG_LEVELS.WARN;
+                    else if (upperLevel === 'DEBUG') level = LOG_LEVELS.DEBUG;
+                }
+                
+                // If error contains status code 4xx or 5xx, adjust level
+                if (statusCode >= 400 && statusCode < 500) level = LOG_LEVELS.WARN;
+                if (statusCode >= 500) level = LOG_LEVELS.ERROR;
+                
+                return {
+                    id: logData.timestamp + Math.random().toString(36).substring(2, 9),
+                    timestamp: formatTimestamp(logData.timestamp),
+                    method: method,
+                    statusCode: statusCode,
+                    host: logData.service || host,
+                    path: path,
+                    message: logData.message || "",
+                    level: level,
+                    rawLog: logData // Keep the original for reference
+                };
+            } catch (e) {
+                // If parsing fails, create a fallback log entry
+                return {
+                    id: Date.now() + Math.random().toString(36).substring(2, 9),
+                    timestamp: formatTimestamp(new Date().toISOString()),
+                    method: "INFO",
+                    statusCode: 200,
+                    host: "whatsapp-bot",
+                    path: "/unknown",
+                    message: typeof rawLog === 'string' ? rawLog : JSON.stringify(rawLog),
+                    level: LOG_LEVELS.INFO,
+                    rawLog: rawLog
+                };
+            }
+        }
+
+        // Format timestamp from ISO to a more readable format
+        function formatTimestamp(isoTimestamp) {
+            if (!isoTimestamp) return new Date().toLocaleString();
+            
+            try {
+                const date = new Date(isoTimestamp);
+                const month = date.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+                const day = date.getDate();
+                const hours = date.getHours().toString().padStart(2, '0');
+                const minutes = date.getMinutes().toString().padStart(2, '0');
+                const seconds = date.getSeconds().toString().padStart(2, '0');
+                const milliseconds = date.getMilliseconds().toString().padStart(2, '0');
+                
+                return `${month} ${day} ${hours}:${minutes}:${seconds}.${milliseconds}`;
+            } catch (e) {
+                return isoTimestamp;
+            }
+        }
+
+        function LogViewer() {
+            const [logs, setLogs] = React.useState([]);
+            const [searchQuery, setSearchQuery] = React.useState("");
+            const [isLive, setIsLive] = React.useState(false);
+            const [selectedLogFile, setSelectedLogFile] = React.useState("combined.log");
+            const [logFiles, setLogFiles] = React.useState([]);
+            const [currentPage, setCurrentPage] = React.useState(1);
+            const [totalPages, setTotalPages] = React.useState(1);
+            const [limit, setLimit] = React.useState(100);
+            const timelineRef = React.useRef(null);
+            const eventSourceRef = React.useRef(null);
+
+            // Fetch available log files
+            React.useEffect(() => {
+                fetch('/api/logs')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.logs && Array.isArray(data.logs)) {
+                            setLogFiles(data.logs);
+                        }
+                    })
+                    .catch(error => console.error('Failed to fetch log files:', error));
+            }, []);
+
+            // Fetch logs
+            React.useEffect(() => {
+                if (!isLive) {
+                    fetchLogs(selectedLogFile, currentPage, limit);
+                }
+            }, [selectedLogFile, currentPage, limit, isLive]);
+
+            // Handle live streaming
+            React.useEffect(() => {
+                if (isLive) {
+                    // Close any existing connection
+                    if (eventSourceRef.current) {
+                        eventSourceRef.current.close();
+                    }
+                    
+                    // Open new SSE connection
+                    const eventSource = new EventSource(`/api/logs/${selectedLogFile}/stream`);
+                    eventSourceRef.current = eventSource;
+                    
+                    eventSource.onmessage = (event) => {
+                        try {
+                            const data = JSON.parse(event.data);
+                            const formattedLog = convertLogFormat(data);
+                            
+                            setLogs(prevLogs => {
+                                // Add new log at the beginning
+                                const newLogs = [formattedLog, ...prevLogs];
+                                // Limit to avoid memory issues
+                                if (newLogs.length > 1000) {
+                                    return newLogs.slice(0, 1000);
+                                }
+                                return newLogs;
+                            });
+                        } catch (error) {
+                            console.error('Error processing SSE data:', error);
+                        }
+                    };
+                    
+                    eventSource.onerror = () => {
+                        console.error('SSE connection error');
+                        // Attempt to reconnect after a delay
+                        setTimeout(() => {
+                            if (isLive) {
+                                setIsLive(false);
+                                setIsLive(true);
+                            }
+                        }, 5000);
+                    };
+                    
+                    // Cleanup
+                    return () => {
+                        eventSource.close();
+                        eventSourceRef.current = null;
+                    };
+                }
+            }, [isLive, selectedLogFile]);
+
+            // Fetch logs from API
+            const fetchLogs = (filename, page, pageLimit) => {
+                fetch(`/api/logs/${filename}?page=${page}&limit=${pageLimit}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        setTotalPages(data.totalPages || 1);
+                        
+                        // Convert logs to our format
+                        const formattedLogs = (data.lines || []).map(convertLogFormat);
+                        setLogs(formattedLogs);
+                    })
+                    .catch(error => {
+                        console.error('Error fetching logs:', error);
+                        setLogs([]);
+                    });
+            };
+
+            // Handle log file change
+            const handleLogFileChange = (e) => {
+                const newLogFile = e.target.value;
+                setSelectedLogFile(newLogFile);
+                setCurrentPage(1);
+                
+                if (isLive) {
+                    // Reset live connection
+                    setIsLive(false);
+                    setTimeout(() => setIsLive(true), 100);
+                }
+            };
+
+            // Toggle live mode
+            const toggleLive = () => {
+                setIsLive(!isLive);
+            };
+
+            // Clear logs
+            const clearLogs = () => {
+                fetch(`/api/logs/${selectedLogFile}/clear`, {
+                    method: 'POST'
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(() => {
+                        setLogs([]);
+                        setCurrentPage(1);
+                        setTotalPages(1);
+                    })
+                    .catch(error => {
+                        console.error('Error clearing logs:', error);
+                    });
+            };
+
+            // Refresh logs
+            const refreshLogs = () => {
+                if (!isLive) {
+                    fetchLogs(selectedLogFile, currentPage, limit);
+                }
+            };
+
+            // Filter logs based on search query
+            const filteredLogs = logs.filter((log) => {
+                if (!searchQuery) return true;
+
+                return (
+                    log.host.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    log.path.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    log.message?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    log.timestamp.toLowerCase().includes(searchQuery.toLowerCase())
+                );
+            });
+
+            // Get color for status code
+            const getStatusColor = (status) => {
+                if (status >= 200 && status < 300) return "text-green-500";
+                if (status >= 400 && status < 500) return "text-amber-500";
+                if (status >= 500) return "text-red-500";
+                return "text-white";
+            };
+
+            // Get background color for row based on log level
+            const getRowBackground = (level) => {
+                if (level === LOG_LEVELS.WARN) return "bg-amber-950/50 border-l-4 border-amber-500";
+                if (level === LOG_LEVELS.ERROR) return "bg-red-950/50 border-l-4 border-red-500";
+                return "";
+            };
+
+            // Get icon for log level
+            const getStatusIcon = (level) => {
+                if (level === LOG_LEVELS.WARN) return <AlertTriangle className="w-4 h-4 text-amber-500" />;
+                if (level === LOG_LEVELS.ERROR) return <XCircle className="w-4 h-4 text-red-500" />;
+                return null;
+            };
+
+            return (
+                <div className="flex flex-col h-screen bg-black text-gray-300 font-mono text-sm">
+                    {/* Header */}
+                    <div className="flex items-center p-2 border-b border-gray-800">
+                        <div className="flex space-x-2">
+                            <button 
+                                className="p-2 rounded-md hover:bg-gray-800" 
+                                onClick={clearLogs}
+                                title="Clear logs"
+                            >
+                                <XCircle className="w-5 h-5" />
+                            </button>
+                            <select
+                                value={selectedLogFile}
+                                onChange={handleLogFileChange}
+                                className="bg-gray-900 border border-gray-700 rounded-md py-1 px-2 focus:outline-none focus:ring-1 focus:ring-gray-600"
+                            >
+                                {logFiles.map((file) => (
+                                    <option key={file.name} value={file.name}>
+                                        {file.name} ({Math.round(file.size / 1024)}KB)
+                                    </option>
+                                ))}
+                            </select>
+                            <select
+                                value={limit}
+                                onChange={(e) => setLimit(Number(e.target.value))}
+                                className="bg-gray-900 border border-gray-700 rounded-md py-1 px-2 focus:outline-none focus:ring-1 focus:ring-gray-600"
+                                disabled={isLive}
+                            >
+                                <option value={50}>50 lines</option>
+                                <option value={100}>100 lines</option>
+                                <option value={200}>200 lines</option>
+                                <option value={500}>500 lines</option>
+                            </select>
+                        </div>
+
+                        <div className="flex-1 mx-2 relative">
+                            <Search className="absolute left-3 top-2.5 w-4 h-4 text-gray-500" />
+                            <input
+                                type="text"
+                                placeholder="Search logs..."
+                                className="w-full bg-gray-900 border border-gray-700 rounded-md py-2 pl-10 pr-4 focus:outline-none focus:ring-1 focus:ring-gray-600"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                            <button
+                                className={cn(
+                                    "flex items-center gap-2 px-4 py-2 rounded-md border border-gray-700",
+                                    isLive ? "bg-blue-900/50 text-blue-400 border-blue-700" : "hover:bg-gray-800",
+                                )}
+                                onClick={toggleLive}
+                            >
+                                <span className={cn("w-2 h-2 rounded-full", isLive ? "bg-blue-400" : "bg-gray-400")}></span>
+                                Live
+                            </button>
+                            <button 
+                                className="p-2 rounded-md hover:bg-gray-800"
+                                onClick={refreshLogs}
+                                disabled={isLive}
+                            >
+                                <RefreshCw className="w-5 h-5" />
+                            </button>
+                            {!isLive && (
+                                <div className="flex items-center space-x-1">
+                                    <button 
+                                        className="p-1 rounded-md hover:bg-gray-800 disabled:opacity-50"
+                                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                        disabled={currentPage <= 1}
+                                    >
+                                        ← Prev
+                                    </button>
+                                    <span className="px-2">{currentPage} / {totalPages}</span>
+                                    <button 
+                                        className="p-1 rounded-md hover:bg-gray-800 disabled:opacity-50"
+                                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                        disabled={currentPage >= totalPages}
+                                    >
+                                        Next →
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Log Entries Table Header */}
+                    <div className="grid grid-cols-12 gap-2 py-2 px-4 border-b border-gray-800 text-gray-500">
+                        <div className="col-span-2">Time</div>
+                        <div className="col-span-1">Status</div>
+                        <div className="col-span-2">Service</div>
+                        <div className="col-span-3">Path</div>
+                        <div className="col-span-4">Message</div>
+                    </div>
+
+                    {/* Log Entries */}
+                    <div className="flex-1 overflow-auto">
+                        {filteredLogs.length === 0 ? (
+                            <div className="text-center py-10 text-gray-500">No logs found</div>
+                        ) : (
+                            filteredLogs.map((log) => (
+                                <div
+                                    key={log.id}
+                                    className={cn(
+                                        "grid grid-cols-12 gap-2 py-2 px-4 border-b border-gray-800 hover:bg-gray-900/50",
+                                        getRowBackground(log.level),
+                                    )}
+                                >
+                                    <div className="col-span-2 flex items-center gap-2">
+                                        {getStatusIcon(log.level)}
+                                        <span>{log.timestamp}</span>
+                                    </div>
+                                    <div className="col-span-1">
+                                        <span className="flex items-center gap-1">
+                                            <span className={getStatusColor(log.statusCode)}>{log.method}</span>
+                                            <span className={getStatusColor(log.statusCode)}>{log.statusCode}</span>
+                                        </span>
+                                    </div>
+                                    <div className="col-span-2 truncate">{log.host}</div>
+                                    <div className="col-span-3 flex items-center gap-2">
+                                        <span className="inline-flex items-center justify-center w-5 h-5 bg-gray-800 rounded text-xs">ƒ</span>
+                                        <span className="truncate">{log.path}</span>
+                                    </div>
+                                    <div className="col-span-4 truncate">
+                                        {log.message && (
+                                            <span className={log.level === LOG_LEVELS.ERROR ? "text-red-400" : 
+                                                            log.level === LOG_LEVELS.WARN ? "text-amber-400" : ""}>{log.message}</span>
+                                        )}
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    {/* Live Mode Footer */}
+                    {isLive && (
+                        <div className="bg-blue-900/30 border-t border-blue-800 py-2 px-4 flex items-center">
+                            <Play className="w-4 h-4 text-blue-400 mr-2" />
+                            <span className="text-blue-400">Live Mode - Streaming {selectedLogFile}</span>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // Render the React component to the DOM
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<LogViewer />);
+    </script>
+</body>
+</html> 
