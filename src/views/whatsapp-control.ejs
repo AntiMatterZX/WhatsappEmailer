@@ -1,0 +1,345 @@
+<%- contentFor('body') %>
+
+<div class="mb-4">
+  <div class="d-flex justify-content-between align-items-center">
+    <h1 class="mb-0">WhatsApp Connection Control</h1>
+  </div>
+  <p class="text-secondary mt-2">Manage your WhatsApp connection state</p>
+</div>
+
+<!-- Connection Status Panel -->
+<div class="card-dark mb-4">
+  <div class="card-header d-flex justify-content-between align-items-center">
+    <div class="d-flex align-items-center">
+      <i class="bi bi-whatsapp me-2"></i>
+      <span>WhatsApp Connection Status</span>
+    </div>
+    <button id="refreshStatus" class="btn-dark-outline">
+      <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+    </button>
+  </div>
+  <div class="card-body">
+    <div class="row">
+      <div class="col-md-6">
+        <div class="d-flex align-items-center mb-3">
+          <div id="statusBadge" class="me-3">
+            <i class="bi bi-circle-fill text-secondary"></i>
+          </div>
+          <div id="statusText" class="fs-5">Checking connection status...</div>
+        </div>
+        
+        <div id="connectionDetails" class="mb-4">
+          <div class="skeleton-loader w-100"></div>
+        </div>
+        
+        <div class="d-flex mt-4">
+          <button id="connectBtn" class="btn-dark-primary me-3" disabled>
+            <i class="bi bi-power me-1"></i>Connect
+          </button>
+          <button id="disconnectBtn" class="btn-dark-outline text-danger me-3" disabled>
+            <i class="bi bi-power me-1"></i>Disconnect
+          </button>
+          <button id="restartBtn" class="btn-dark-outline me-3" disabled>
+            <i class="bi bi-arrow-repeat me-1"></i>Restart
+          </button>
+        </div>
+      </div>
+      
+      <div class="col-md-6 text-center">
+        <div id="qrContainer" class="d-none bg-white p-4 rounded">
+          <div id="qrCode"></div>
+          <p class="mt-3 text-dark">Scan with WhatsApp to connect</p>
+        </div>
+        
+        <div id="connectionSuccess" class="d-none">
+          <div class="text-success mb-3">
+            <i class="bi bi-check-circle-fill" style="font-size: 4rem;"></i>
+          </div>
+          <h4 class="text-success">Connected Successfully</h4>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Info Card -->
+<div class="card-dark mb-4">
+  <div class="card-header">
+    <i class="bi bi-info-circle me-2"></i>
+    <span>Connection Information</span>
+  </div>
+  <div class="card-body">
+    <div class="alert alert-secondary bg-dark border-secondary">
+      <h5><i class="bi bi-lightbulb me-2"></i>How Connection Works</h5>
+      <p>
+        The WhatsApp Bot connects to WhatsApp Web using a browser-based client. When you connect:
+      </p>
+      <ol>
+        <li>The system initializes a virtual browser</li>
+        <li>You need to scan a QR code with your WhatsApp mobile app</li>
+        <li>Once authenticated, messages will be received and processed automatically</li>
+      </ol>
+      <p>
+        <strong>Note:</strong> If you disconnect, you'll need to scan the QR code again to reconnect.
+      </p>
+    </div>
+    
+    <div class="alert alert-secondary bg-dark border-secondary mt-3">
+      <h5><i class="bi bi-terminal me-2"></i>Command Line Options</h5>
+      <p>
+        You can also manage your WhatsApp connection using the command line:
+      </p>
+      <ul>
+        <li><code>npm run whatsapp:connect</code> - Connect to WhatsApp</li>
+        <li><code>npm run whatsapp:disconnect</code> - Disconnect from WhatsApp</li>
+        <li><code>npm run whatsapp:status</code> - Check connection status</li>
+      </ul>
+      <p>
+        Or use the provided batch files: <code>whatsapp-connect.bat</code> and <code>whatsapp-disconnect.bat</code>
+      </p>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    // DOM elements
+    const statusBadge = document.getElementById('statusBadge');
+    const statusText = document.getElementById('statusText');
+    const connectionDetails = document.getElementById('connectionDetails');
+    const qrContainer = document.getElementById('qrContainer');
+    const qrCode = document.getElementById('qrCode');
+    const connectionSuccess = document.getElementById('connectionSuccess');
+    const connectBtn = document.getElementById('connectBtn');
+    const disconnectBtn = document.getElementById('disconnectBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const refreshStatus = document.getElementById('refreshStatus');
+    
+    // Status states and colors
+    const STATUS = {
+      DISCONNECTED: { icon: 'bi-circle-fill text-danger', text: 'Disconnected' },
+      CONNECTING: { icon: 'bi-circle-fill text-warning', text: 'Connecting...' },
+      CONNECTED: { icon: 'bi-circle-fill text-success', text: 'Connected' },
+      QR_READY: { icon: 'bi-qr-code text-primary', text: 'QR Code Ready' },
+      ERROR: { icon: 'bi-exclamation-circle-fill text-danger', text: 'Connection Error' }
+    };
+    
+    // Set status display
+    function setStatus(status, message = null) {
+      // Update icon and text
+      statusBadge.innerHTML = `<i class="bi ${status.icon}"></i>`;
+      statusText.textContent = message || status.text;
+      
+      // Update button states based on status
+      if (status === STATUS.CONNECTED) {
+        connectBtn.disabled = true;
+        disconnectBtn.disabled = false;
+        restartBtn.disabled = false;
+        qrContainer.classList.add('d-none');
+        connectionSuccess.classList.remove('d-none');
+      } else if (status === STATUS.DISCONNECTED) {
+        connectBtn.disabled = false;
+        disconnectBtn.disabled = true;
+        restartBtn.disabled = true;
+        qrContainer.classList.add('d-none');
+        connectionSuccess.classList.add('d-none');
+      } else if (status === STATUS.QR_READY) {
+        connectBtn.disabled = true;
+        disconnectBtn.disabled = false;
+        restartBtn.disabled = false;
+        qrContainer.classList.remove('d-none');
+        connectionSuccess.classList.add('d-none');
+      } else {
+        connectBtn.disabled = true;
+        disconnectBtn.disabled = true;
+        restartBtn.disabled = true;
+      }
+    }
+    
+    // Fetch connection status
+    async function fetchStatus() {
+      try {
+        const response = await fetch('/api/status');
+        const data = await response.json();
+        
+        if (data.whatsapp === 'connected') {
+          setStatus(STATUS.CONNECTED);
+          
+          // Show connection details
+          const connectedSince = data.whatsappConnectedSince 
+            ? new Date(data.whatsappConnectedSince).toLocaleString() 
+            : 'Unknown';
+            
+          connectionDetails.innerHTML = `
+            <div class="mb-2"><strong>Status:</strong> Connected</div>
+            <div class="mb-2"><strong>Connected Since:</strong> ${connectedSince}</div>
+            <div><strong>WhatsApp User:</strong> ${data.whatsappInfo?.me?.user || 'Unknown'}</div>
+          `;
+        } else if (data.whatsapp === 'qr_ready') {
+          setStatus(STATUS.QR_READY);
+          connectionDetails.innerHTML = '<div><strong>Status:</strong> Waiting for QR Code Scan</div>';
+          
+          // Display QR code
+          if (data.whatsappQR) {
+            qrCode.innerHTML = data.whatsappQR;
+          }
+        } else if (data.whatsapp === 'connecting') {
+          setStatus(STATUS.CONNECTING);
+          connectionDetails.innerHTML = '<div><strong>Status:</strong> Initializing connection...</div>';
+        } else {
+          setStatus(STATUS.DISCONNECTED);
+          connectionDetails.innerHTML = '<div><strong>Status:</strong> Disconnected</div>';
+        }
+      } catch (error) {
+        console.error('Error fetching status:', error);
+        setStatus(STATUS.ERROR, 'Error fetching connection status');
+        connectionDetails.innerHTML = '<div class="text-danger">Failed to get connection information</div>';
+      }
+    }
+    
+    // Handle connect button
+    connectBtn.addEventListener('click', async () => {
+      setStatus(STATUS.CONNECTING, 'Initializing connection...');
+      
+      try {
+        const response = await fetch('/api/whatsapp/control', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ action: 'restart' })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          showToast('Connection initiated. Please wait for QR code.', 'success');
+          
+          // Poll for status changes to get QR code
+          const statusInterval = setInterval(async () => {
+            await fetchStatus();
+            
+            // If we got QR code or connected, stop polling
+            if (statusText.textContent === STATUS.QR_READY.text || 
+                statusText.textContent === STATUS.CONNECTED.text) {
+              clearInterval(statusInterval);
+            }
+          }, 2000);
+        } else {
+          setStatus(STATUS.ERROR, 'Failed to initialize connection');
+          showToast(data.error || 'Failed to initialize connection', 'error');
+        }
+      } catch (error) {
+        console.error('Error connecting:', error);
+        setStatus(STATUS.ERROR, 'Connection error');
+        showToast('Failed to connect to WhatsApp', 'error');
+      }
+    });
+    
+    // Handle disconnect button
+    disconnectBtn.addEventListener('click', async () => {
+      if (!confirm('Are you sure you want to disconnect from WhatsApp? You will need to scan the QR code again to reconnect.')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/whatsapp/control', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ action: 'logout' })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          setStatus(STATUS.DISCONNECTED);
+          showToast('Disconnected from WhatsApp successfully', 'success');
+        } else {
+          showToast(data.error || 'Failed to disconnect', 'error');
+        }
+      } catch (error) {
+        console.error('Error disconnecting:', error);
+        showToast('Failed to disconnect from WhatsApp', 'error');
+      }
+    });
+    
+    // Handle restart button
+    restartBtn.addEventListener('click', async () => {
+      if (!confirm('Are you sure you want to restart the WhatsApp connection? This may temporarily disconnect you.')) {
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/whatsapp/control', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ action: 'restart' })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+          setStatus(STATUS.CONNECTING, 'Restarting connection...');
+          showToast('WhatsApp connection is restarting', 'success');
+          
+          // Poll for status changes
+          setTimeout(fetchStatus, 5000);
+        } else {
+          showToast(data.error || 'Failed to restart connection', 'error');
+        }
+      } catch (error) {
+        console.error('Error restarting:', error);
+        showToast('Failed to restart WhatsApp connection', 'error');
+      }
+    });
+    
+    // Handle refresh button
+    refreshStatus.addEventListener('click', fetchStatus);
+    
+    // Helper function to show toast notifications
+    function showToast(message, type = 'info') {
+      const toast = document.createElement('div');
+      toast.className = `alert alert-${type === 'error' ? 'danger' : type === 'success' ? 'success' : 'info'} alert-dismissible fade show position-fixed top-0 end-0 m-3`;
+      toast.style.zIndex = 2000;
+      toast.innerHTML = `
+        ${type === 'error' ? '<i class="bi bi-exclamation-triangle-fill me-2"></i>' : 
+          type === 'success' ? '<i class="bi bi-check-circle-fill me-2"></i>' : 
+          '<i class="bi bi-info-circle-fill me-2"></i>'}
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      `;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 150);
+      }, 5000);
+    }
+    
+    // Initialize by fetching status
+    fetchStatus();
+    
+    // Refresh status every 30 seconds
+    setInterval(fetchStatus, 30000);
+  });
+</script>
+
+<style>
+  .skeleton-loader {
+    height: 1.2rem;
+    background: linear-gradient(90deg, #333 25%, #444 50%, #333 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+  }
+  
+  @keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+</style> 

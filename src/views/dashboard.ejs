@@ -525,6 +525,9 @@
       disconnectBtn.classList.add('d-none');
       restartBtn.classList.add('d-none');
       
+      // Hide any existing QR code
+      qrCode.classList.add('d-none');
+      
       if (data.connected) {
         // Connected state
         statusBadge.className = 'status-badge status-connected me-3';
@@ -536,26 +539,34 @@
         disconnectBtn.classList.remove('d-none');
         restartBtn.classList.remove('d-none');
         
-        // Format connection date for display
-        const connectedDate = new Date(data.connectedSince);
-        const formattedDate = connectedDate.toLocaleDateString('en-US', { 
-          month: 'numeric', 
-          day: 'numeric', 
-          year: 'numeric' 
-        });
+        // Format connection date for display - check if date is valid first
+        let formattedDate = 'Unknown';
+        let formattedTime = '';
         
-        const formattedTime = connectedDate.toLocaleTimeString('en-US', {
-          hour: 'numeric',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: false
-        });
+        if (data.connectedSince) {
+          const connectedDate = new Date(data.connectedSince);
+          // Check if date is valid (not 1970/01/01)
+          if (connectedDate.getFullYear() > 1970) {
+            formattedDate = connectedDate.toLocaleDateString('en-US', { 
+              month: 'numeric', 
+              day: 'numeric', 
+              year: 'numeric' 
+            });
+            
+            formattedTime = connectedDate.toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              minute: '2-digit',
+              second: '2-digit',
+              hour12: false
+            });
+          }
+        }
         
         // Update details
         connectionDetails.innerHTML = `
           <div>
             <div class="text-secondary mb-1">Connected since</div>
-            <div class="fs-5">${formattedDate}, ${formattedTime}</div>
+            <div class="fs-5">${formattedDate}${formattedTime ? ', ' + formattedTime : ''}</div>
           </div>
           <div class="mt-3">
             <div class="text-secondary mb-1">Phone number</div>
@@ -579,7 +590,7 @@
           <div class="alert alert-info p-2">
             <small>
               <i class="bi bi-info-circle me-1"></i>
-              Scan the QR code to authenticate WhatsApp Web
+              Scan the QR code with your phone to authenticate WhatsApp Web
             </small>
           </div>
         `;
@@ -601,15 +612,29 @@
         connectionDetails.innerHTML = `
           <div class="alert alert-secondary p-2 bg-dark border-secondary">
             <i class="bi bi-info-circle me-1"></i>
-            Not connected to WhatsApp
+            Not connected to WhatsApp. Click "Connect" to generate a QR code.
           </div>
         `;
       }
       
-      // Add event listeners
-      restartBtn.addEventListener('click', restartWhatsAppClient);
-      connectBtn.addEventListener('click', connectWhatsApp);
-      disconnectBtn.addEventListener('click', disconnectWhatsApp);
+      // Remove existing event listeners by cloning and replacing elements
+      const newRestartBtn = restartBtn.cloneNode(true);
+      const newConnectBtn = connectBtn.cloneNode(true);
+      const newDisconnectBtn = disconnectBtn.cloneNode(true);
+      
+      restartBtn.parentNode.replaceChild(newRestartBtn, restartBtn);
+      connectBtn.parentNode.replaceChild(newConnectBtn, connectBtn);
+      disconnectBtn.parentNode.replaceChild(newDisconnectBtn, disconnectBtn);
+      
+      // Update our references to the buttons
+      const updatedRestartBtn = document.getElementById('restartClient');
+      const updatedConnectBtn = document.getElementById('connectBtn');
+      const updatedDisconnectBtn = document.getElementById('disconnectBtn');
+      
+      // Add event listeners to the updated elements
+      updatedRestartBtn.addEventListener('click', restartWhatsAppClient);
+      updatedConnectBtn.addEventListener('click', connectWhatsApp);
+      updatedDisconnectBtn.addEventListener('click', disconnectWhatsApp);
       
     } catch (error) {
       console.error('Error checking WhatsApp status:', error);
@@ -635,6 +660,66 @@
     }
   }
   
+  async function disconnectWhatsApp() {
+    if (confirm('Are you sure you want to disconnect the WhatsApp client? You will need to scan a QR code to reconnect.')) {
+      try {
+        // Update UI to show disconnection in progress
+        document.getElementById('statusBadge').className = 'status-badge status-connecting me-3';
+        document.getElementById('statusBadge').innerHTML = '<i class="bi bi-arrow-clockwise"></i>';
+        document.getElementById('statusMessage').textContent = 'Disconnecting WhatsApp...';
+        document.getElementById('connectionProgress').style.width = '50%';
+        document.getElementById('connectionProgress').className = 'progress-bar bg-warning progress-bar-striped progress-bar-animated';
+        
+        // Hide all buttons while disconnecting
+        document.getElementById('connectBtn').classList.add('d-none');
+        document.getElementById('disconnectBtn').classList.add('d-none');
+        document.getElementById('restartClient').classList.add('d-none');
+        
+        // Use the disconnect endpoint
+        const response = await fetch('/api/whatsapp/disconnect', {
+          method: 'POST'
+        });
+        
+        if (response.ok) {
+          // Show connect button right away
+          document.getElementById('statusBadge').className = 'status-badge status-disconnected me-3';
+          document.getElementById('statusBadge').innerHTML = '<i class="bi bi-x-circle"></i>';
+          document.getElementById('statusMessage').textContent = 'WhatsApp is disconnected';
+          document.getElementById('connectionProgress').className = 'progress-bar bg-danger';
+          document.getElementById('connectionProgress').style.width = '100%';
+          setTimeout(() => {
+            document.getElementById('connectionProgress').style.width = '0%';
+          }, 1000);
+          
+          // Show connect button
+          document.getElementById('connectBtn').classList.remove('d-none');
+          document.getElementById('restartClient').classList.remove('d-none');
+          
+          // Clear connection details
+          document.getElementById('connectionDetails').innerHTML = `
+            <div class="alert alert-secondary p-2 bg-dark border-secondary">
+              <i class="bi bi-info-circle me-1"></i>
+              Disconnected. Click "Connect" to generate a QR code and reconnect.
+            </div>
+          `;
+          
+          // Check the new status after disconnection
+          setTimeout(() => {
+            checkWhatsAppStatus();
+          }, 2000);
+        } else {
+          const data = await response.json();
+          alert(`Failed to disconnect WhatsApp: ${data.error || 'Unknown error'}`);
+          checkWhatsAppStatus();
+        }
+      } catch (error) {
+        console.error('Error disconnecting WhatsApp:', error);
+        alert(`Error disconnecting WhatsApp: ${error.message || 'Unknown error'}`);
+        checkWhatsAppStatus();
+      }
+    }
+  }
+  
   async function restartWhatsAppClient() {
     if (confirm('Are you sure you want to restart the WhatsApp client?')) {
       try {
@@ -650,19 +735,57 @@
         document.getElementById('disconnectBtn').classList.add('d-none');
         document.getElementById('restartClient').classList.add('d-none');
         
+        // Clear any existing QR code
+        document.getElementById('qrCode').innerHTML = '';
+        document.getElementById('qrCode').classList.add('d-none');
+        
         const response = await fetch('/api/whatsapp/restart', {
           method: 'POST'
         });
         
         if (response.ok) {
-          // Check status after delays
-          setTimeout(() => {
-            checkWhatsAppStatus();
-          }, 3000);
+          // Show a message during restart
+          document.getElementById('connectionDetails').innerHTML = `
+            <div class="alert alert-warning p-2">
+              <i class="bi bi-arrow-repeat me-1"></i>
+              Restarting WhatsApp client, please wait...
+            </div>
+          `;
           
-          setTimeout(() => {
-            checkWhatsAppStatus();
-          }, 10000);
+          // Regular polling to check status and look for QR code
+          let checkCount = 0;
+          const statusCheckInterval = setInterval(() => {
+            checkCount++;
+            fetch('/api/whatsapp/status')
+              .then(resp => resp.json())
+              .then(data => {
+                if (data.qrCode) {
+                  // QR code is ready
+                  document.getElementById('qrCode').innerHTML = data.qrCode;
+                  document.getElementById('qrCode').classList.remove('d-none');
+                  
+                  document.getElementById('statusBadge').className = 'status-badge status-connecting me-3';
+                  document.getElementById('statusBadge').innerHTML = '<i class="bi bi-qr-code"></i>';
+                  document.getElementById('statusMessage').textContent = 'Scan QR code with WhatsApp on your phone';
+                  
+                  clearInterval(statusCheckInterval);
+                  checkWhatsAppStatus();
+                } else if (data.connected) {
+                  // Connected successfully
+                  clearInterval(statusCheckInterval);
+                  checkWhatsAppStatus();
+                } else if (checkCount >= 15) {
+                  // Stop checking after 15 attempts (30 seconds)
+                  clearInterval(statusCheckInterval);
+                  checkWhatsAppStatus();
+                }
+              })
+              .catch(err => {
+                console.error("Error checking status during restart:", err);
+                clearInterval(statusCheckInterval);
+                checkWhatsAppStatus();
+              });
+          }, 2000);
         } else {
           const data = await response.json();
           alert(`Failed to restart WhatsApp client: ${data.error || 'Unknown error'}`);
@@ -691,7 +814,11 @@
         document.getElementById('disconnectBtn').classList.add('d-none');
         document.getElementById('restartClient').classList.add('d-none');
         
-        // Use the new connect endpoint for QR code generation
+        // Clear any existing QR code
+        document.getElementById('qrCode').innerHTML = '';
+        document.getElementById('qrCode').classList.add('d-none');
+        
+        // Use the connect endpoint for QR code generation
         const response = await fetch('/api/whatsapp/connect', {
           method: 'POST'
         });
@@ -708,12 +835,37 @@
           // Start checking for status to see QR code
           setTimeout(() => {
             checkWhatsAppStatus();
-          }, 5000);
+          }, 3000);
           
           // Check again after a longer delay if needed
           setTimeout(() => {
             checkWhatsAppStatus();
-          }, 10000);
+          }, 8000);
+          
+          // Set up a periodic check until QR code appears
+          let checkCount = 0;
+          const qrCheckInterval = setInterval(() => {
+            checkCount++;
+            fetch('/api/whatsapp/status')
+              .then(resp => resp.json())
+              .then(data => {
+                if (data.qrCode) {
+                  // QR code is ready
+                  document.getElementById('qrCode').innerHTML = data.qrCode;
+                  document.getElementById('qrCode').classList.remove('d-none');
+                  clearInterval(qrCheckInterval);
+                  checkWhatsAppStatus();
+                } else if (checkCount >= 10) {
+                  // Stop checking after 10 attempts (20 seconds)
+                  clearInterval(qrCheckInterval);
+                  checkWhatsAppStatus();
+                }
+              })
+              .catch(err => {
+                console.error("Error checking for QR code:", err);
+                clearInterval(qrCheckInterval);
+              });
+          }, 2000);
         } else {
           const data = await response.json();
           alert(`Failed to connect WhatsApp: ${data.error || 'Unknown error'}`);
@@ -722,44 +874,6 @@
       } catch (error) {
         console.error('Error connecting WhatsApp:', error);
         alert(`Error connecting WhatsApp: ${error.message || 'Unknown error'}`);
-        checkWhatsAppStatus();
-      }
-    }
-  }
-  
-  async function disconnectWhatsApp() {
-    if (confirm('Are you sure you want to disconnect the WhatsApp client? You will need to scan a QR code to reconnect.')) {
-      try {
-        // Update UI to show disconnection in progress
-        document.getElementById('statusBadge').className = 'status-badge status-connecting me-3';
-        document.getElementById('statusBadge').innerHTML = '<i class="bi bi-arrow-clockwise"></i>';
-        document.getElementById('statusMessage').textContent = 'Disconnecting WhatsApp...';
-        document.getElementById('connectionProgress').style.width = '50%';
-        document.getElementById('connectionProgress').className = 'progress-bar bg-warning progress-bar-striped progress-bar-animated';
-        
-        // Hide all buttons while disconnecting
-        document.getElementById('connectBtn').classList.add('d-none');
-        document.getElementById('disconnectBtn').classList.add('d-none');
-        document.getElementById('restartClient').classList.add('d-none');
-        
-        // Use the new disconnect endpoint
-        const response = await fetch('/api/whatsapp/disconnect', {
-          method: 'POST'
-        });
-        
-        if (response.ok) {
-          // Check the new status after disconnection
-          setTimeout(() => {
-            checkWhatsAppStatus();
-          }, 2000);
-        } else {
-          const data = await response.json();
-          alert(`Failed to disconnect WhatsApp: ${data.error || 'Unknown error'}`);
-          checkWhatsAppStatus();
-        }
-      } catch (error) {
-        console.error('Error disconnecting WhatsApp:', error);
-        alert(`Error disconnecting WhatsApp: ${error.message || 'Unknown error'}`);
         checkWhatsAppStatus();
       }
     }

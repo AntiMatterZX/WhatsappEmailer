@@ -1,3 +1,5 @@
-2025/05/20-02:03:06.676 db0 Reusing MANIFEST C:\whatsapp_bot\.wwebjs_auth\session\session\Default\Local Storage\leveldb/MANIFEST-000001
-2025/05/20-02:03:06.676 db0 Recovering log #23
-2025/05/20-02:03:06.677 db0 Reusing old log C:\whatsapp_bot\.wwebjs_auth\session\session\Default\Local Storage\leveldb/000023.log 
+2025/05/20-03:11:54.245 2e08 Reusing MANIFEST C:\whatsapp_bot\.wwebjs_auth\session\session\Default\Local Storage\leveldb/MANIFEST-000001
+2025/05/20-03:11:54.245 2e08 Recovering log #23
+2025/05/20-03:11:54.246 2e08 Reusing old log C:\whatsapp_bot\.wwebjs_auth\session\session\Default\Local Storage\leveldb/000023.log 
+2025/05/20-03:12:05.006 8964 Level-0 table #27: started
+2025/05/20-03:12:05.017 8964 Level-0 table #27: 15043 bytes OK

@@ -7,7 +7,7 @@ const express = require('express');
 const router = express.Router();
 const Message = require('../models/Message');
 const Group = require('../models/Group');
-const { isAuthenticated } = require('../middleware/auth');
+const { isAuthenticated, isAdmin } = require('../middleware/auth');
 const logger = require('../utils/logger');
 
 /**
@@ -254,6 +254,58 @@ router.post('/cache/clear', isAuthenticated, async (req, res) => {
   } catch (error) {
     logger.error('Error clearing cache:', error);
     res.status(500).json({ error: 'Failed to clear cache' });
+  }
+});
+
+// WhatsApp client control endpoints
+router.post('/whatsapp/control', isAdmin, async (req, res) => {
+  try {
+    const { action } = req.body;
+    const client = req.app.get('whatsappClient');
+    
+    if (!client) {
+      return res.status(500).json({ success: false, error: 'WhatsApp client not initialized' });
+    }
+    
+    if (action === 'restart') {
+      // Destroy existing client and reinitialize
+      logger.info('Admin requested WhatsApp client restart');
+      
+      try {
+        await client.destroy();
+        logger.info('WhatsApp client destroyed, reinitializing...');
+        
+        // Wait a moment before reinitializing
+        setTimeout(() => {
+          client.initialize().catch(err => {
+            logger.error('Error reinitializing WhatsApp client:', err);
+          });
+        }, 1000);
+        
+        return res.json({ success: true, message: 'WhatsApp client is restarting' });
+      } catch (error) {
+        logger.error('Error during WhatsApp client restart:', error);
+        return res.status(500).json({ success: false, error: 'Error restarting WhatsApp client' });
+      }
+    } else if (action === 'logout') {
+      // Logout of WhatsApp
+      logger.info('Admin requested WhatsApp client logout');
+      
+      try {
+        await client.logout();
+        logger.info('WhatsApp client logged out successfully');
+        
+        return res.json({ success: true, message: 'WhatsApp client logged out successfully' });
+      } catch (error) {
+        logger.error('Error during WhatsApp client logout:', error);
+        return res.status(500).json({ success: false, error: 'Error logging out WhatsApp client' });
+      }
+    } else {
+      return res.status(400).json({ success: false, error: 'Invalid action. Use "restart" or "logout"' });
+    }
+  } catch (error) {
+    logger.error('Error controlling WhatsApp client:', error);
+    res.status(500).json({ success: false, error: 'Server error' });
   }
 });
 

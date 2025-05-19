@@ -120,7 +120,9 @@ router.get('/', isAuthenticated, async (req, res) => {
       availableLogs.map(async (file) => {
         try {
           const content = await fs.readFile(file.path, 'utf8');
-          const lines = content.split('\n').filter(Boolean).slice(-50);
+          // Split into lines, filter empty lines, take last 50, and reverse to show newest first
+          const allLines = content.split('\n').filter(Boolean);
+          const lines = allLines.slice(-50).reverse();
           return {
             name: file.name,
             path: file.displayPath || file.path, // Use display path for frontend

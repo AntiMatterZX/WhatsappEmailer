@@ -14,7 +14,10 @@
     "start:error": "set LOG_LEVEL=error&& node src/index.js",
     "start:quiet": "set LOG_LEVEL=error&& set NODE_ENV=production&& node src/index.js",
     "env": "node scripts/env-editor.js",
-    "env:setup": "node scripts/setup-env.js"
+    "env:setup": "node scripts/setup-env.js",
+    "whatsapp:connect": "node src/scripts/whatsapp-connection.js connect",
+    "whatsapp:disconnect": "node src/scripts/whatsapp-connection.js disconnect",
+    "whatsapp:status": "node src/scripts/whatsapp-connection.js status"
   },
   "dependencies": {
     "@tailwindcss/forms": "^0.5.10",

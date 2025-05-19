@@ -99,7 +99,7 @@ app.get('/metrics', async (req, res) => {
  */
 const client = new Client({
   authStrategy: new LocalAuth({
-    dataPath: process.env.WHATSAPP_SESSION_PATH
+    dataPath: '/tmp/.wwebjs_auth_session'
   }),
   puppeteer: {
     headless: true,
@@ -110,12 +110,7 @@ const client = new Client({
       '--disable-accelerated-2d-canvas', 
       '--no-first-run', 
       '--no-zygote', 
-      '--single-process', 
-      '--disable-gpu',
-      '--disable-web-security',
-      '--ignore-certificate-errors',
-      '--allow-running-insecure-content',
-      '--disable-features=IsolateOrigins,site-per-process'
+      '--disable-gpu'
     ],
     defaultViewport: { width: 1280, height: 900 }
   }
@@ -238,6 +233,15 @@ app.use('/api', apiRoutes);
 app.use('/settings', settingsRoutes);
 app.use('/api/settings', settingsRoutes);
 
+// WhatsApp connection control route
+app.get('/whatsapp/control', (req, res) => {
+  res.render('whatsapp-control', { 
+    title: 'WhatsApp Connection Control',
+    user: req.session.user,
+    activeTab: 'whatsapp-control'
+  });
+});
+
 // Existing routes
 app.use('/api/webhook', webhookRoutes);
 app.use('/api/logs', logsRoutes);
@@ -251,6 +255,48 @@ app.get('/health', (req, res) => {
     status: 'ok',
     whatsapp: client.pupPage ? 'connected' : 'disconnected',
     queue: messageQueue ? 'active' : 'inactive'
+  });
+});
+
+/**
+ * Status endpoint for client-side apps
+ */
+app.get('/api/status', (req, res) => {
+  // Get WhatsApp connection details
+  let whatsappStatus = 'disconnected';
+  let whatsappInfo = null;
+  
+  // Check if client is fully ready
+  if (client.info) {
+    whatsappStatus = 'connected';
+    
+    // Get session info
+    whatsappInfo = {
+      me: {
+        user: client.info.wid.user,
+        pushname: client.info.pushname || 'Unknown'
+      },
+      platform: client.info.platform || 'Unknown'
+    };
+  } else if (client.pupPage) {
+    // Client is initialized but not fully connected
+    whatsappStatus = 'connecting';
+  } else if (app.get('whatsappQR')) {
+    // QR code is ready
+    whatsappStatus = 'qr_ready';
+  }
+
+  // Return system status
+  res.json({
+    time: new Date().toISOString(),
+    status: 'ok',
+    whatsapp: whatsappStatus,
+    whatsappConnectedSince: app.get('whatsappConnectedSince'),
+    whatsappQR: app.get('whatsappQR'),
+    whatsappInfo: whatsappInfo,
+    nodeVersion: process.version,
+    uptime: Math.floor(process.uptime()),
+    memory: process.memoryUsage()
   });
 });
 
@@ -449,8 +495,5 @@ function gracefulShutdown() {
   }
 }
 
-// Export helper functions for use in other modules
-module.exports = {
-  client,
-  logEmailEvent
-}; 
+// Export the Express app for Vercel
+module.exports = app; 

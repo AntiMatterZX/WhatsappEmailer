@@ -172,16 +172,16 @@ function LogViewer() {
       eventSource.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
+          // Skip connection messages
+          if (data.type === 'connection') return;
+          
           const formattedLog = convertLogFormat(data);
           
           setLogs(prevLogs => {
-            // Add new log at the beginning
+            // Add new log at the beginning (newest first)
             const newLogs = [formattedLog, ...prevLogs];
             // Limit to avoid memory issues
-            if (newLogs.length > 1000) {
-              return newLogs.slice(0, 1000);
-            }
-            return newLogs;
+            return newLogs.slice(0, 500); // Reduced from 1000 to 500 for better performance
           });
         } catch (error) {
           console.error('Error processing SSE data:', error);

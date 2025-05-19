@@ -52,9 +52,20 @@ router.get('/:filename', async (req, res) => {
     const fileContent = await fs.readFile(filename, 'utf8');
     const lines = fileContent.split('\n').filter(line => line.trim() !== '');
     
-    // Apply pagination
+    // Apply pagination - newest logs first
     const totalLines = lines.length;
-    const paginatedLines = lines.slice(-totalLines + skip, -totalLines + skip + limit).reverse();
+    
+    // Safely extract the lines in reverse order (newest first)
+    let paginatedLines = [];
+    if (totalLines > 0) {
+      // Start from the end of the array (newest logs) and work backwards
+      // Calculate safe start and end indices
+      const startIdx = Math.max(0, totalLines - skip - limit);
+      const endIdx = Math.min(totalLines, totalLines - skip);
+      
+      // Extract the relevant slice and reverse it
+      paginatedLines = lines.slice(startIdx, endIdx).reverse();
+    }
     
     res.json({
       filename,
@@ -117,10 +128,16 @@ router.get('/:filename/stream', (req, res) => {
     // Create a tail stream
     let lastSize = 0;
     try {
-      const stats = fsSync.statSync(filename);
-      lastSize = stats.size;
+      if (fsSync.existsSync(filename)) {
+        const stats = fsSync.statSync(filename);
+        lastSize = stats.size;
+      } else {
+        // If file doesn't exist, start from 0
+        lastSize = 0;
+      }
     } catch (error) {
-      // If file doesn't exist, start from 0
+      logger.warn(`Error getting file stats for ${filename}: ${error.message}`);
+      // If there's an error, start from 0
       lastSize = 0;
     }
     
@@ -136,29 +153,37 @@ router.get('/:filename/stream', (req, res) => {
         const stats = fsSync.statSync(filename);
         if (stats.size > lastSize) {
           // File has grown, read the new part
-          const handle = await fs.open(filename, 'r');
-          const buffer = Buffer.alloc(stats.size - lastSize);
-          await handle.read(buffer, 0, buffer.length, lastSize);
-          await handle.close();
-          
-          const newContent = buffer.toString('utf8');
-          
-          // Send new lines as events
-          const lines = newContent.split('\n')
-            .filter(line => line.trim() !== '')
-            .map(line => {
-              try {
-                return JSON.parse(line);
-              } catch (e) {
-                return { message: line };
-              }
-            });
+          try {
+            const handle = await fs.open(filename, 'r');
+            const buffer = Buffer.alloc(Math.min(stats.size - lastSize, 65536)); // Limit to 64KB
+            await handle.read(buffer, 0, buffer.length, lastSize);
+            await handle.close();
             
-          lines.forEach(line => {
-            res.write(`data: ${JSON.stringify(line)}\n\n`);
-          });
-          
-          lastSize = stats.size;
+            const newContent = buffer.toString('utf8');
+            
+            // Send new lines as events
+            const lines = newContent.split('\n')
+              .filter(line => line.trim() !== '')
+              .map(line => {
+                try {
+                  return JSON.parse(line);
+                } catch (e) {
+                  return { message: line };
+                }
+              });
+              
+            // Process at most 50 new lines at once to prevent overload
+            const limitedLines = lines.slice(-50);
+            
+            for (const line of limitedLines) {
+              res.write(`data: ${JSON.stringify(line)}\n\n`);
+            }
+            
+            lastSize = stats.size;
+          } catch (fileError) {
+            logger.error(`Error reading file ${filename}: ${fileError.message}`);
+            // Don't update lastSize to retry next time
+          }
         }
       } catch (error) {
         logger.error('Error in log streaming:', error);
