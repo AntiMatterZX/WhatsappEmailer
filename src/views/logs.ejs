@@ -624,23 +624,26 @@
     }).join('');
     
     // If this is a live update, we want to append instead of replace
-    if (isLiveUpdate && logData.length > 0) {
-      // Only add new rows if there are more logs than before
-      if (logs.length > logData.length) {
-        const newRows = rows.slice(logData.length);
-        logTableBody.innerHTML += newRows;
+    // if (isLiveUpdate && logData.length > 0) {
+    //   // Only add new rows if there are more logs than before
+    //   if (logs.length > logData.length) {
+    //     const newRows = rows.slice(logData.length);
+    //     logTableBody.innerHTML += newRows;
         
-        // Scroll to bottom when in live mode
-        const logContainer = document.getElementById('logContainer');
-        logContainer.scrollTop = logContainer.scrollHeight;
-      }
-    } else {
-      logTableBody.innerHTML = rows;
+    //     // Scroll to bottom when in live mode
+    //     // const logContainer = document.getElementById('logContainer');
+    //     // logContainer.scrollTop = logContainer.scrollHeight;
+    //   }
+    // } else {
+    //   logTableBody.innerHTML = rows;
       
-      // Scroll to bottom on initial load
-      const logContainer = document.getElementById('logContainer');
-      logContainer.scrollTop = logContainer.scrollHeight;
-    }
+    //   // Scroll to bottom on initial load
+    //   // const logContainer = document.getElementById('logContainer');
+    //   // logContainer.scrollTop = logContainer.scrollHeight;
+    // }
+    logTableBody.innerHTML = rows; // Always replace with the new batch, which is newest-first
+    // Optional: Scroll to top after rendering to ensure newest logs are visible
+    document.getElementById('logContainer').scrollTop = 0;
   }
   
   function switchLogFile(button) {

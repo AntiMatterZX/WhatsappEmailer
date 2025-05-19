@@ -467,17 +467,8 @@
         `;
       }).join('');
       
-      // If this is a live update, we want to preserve scroll position
-      const logsContainer = document.getElementById('recentLogs');
-      const wasAtBottom = logsContainer.scrollHeight - logsContainer.clientHeight <= logsContainer.scrollTop + 5;
-      
       // Update the table
       logsBody.innerHTML = logRows;
-      
-      // Scroll to bottom if we were at the bottom before or if it's not a live update
-      if (wasAtBottom || !isLiveUpdate) {
-        logsContainer.scrollTop = logsContainer.scrollHeight;
-      }
     } catch (error) {
       console.error('Error fetching recent logs:', error);
       if (!isLiveUpdate) {
@@ -511,7 +502,7 @@
       connectionProgress.style.width = '30%';
       connectionProgress.className = 'progress-bar bg-info';
       
-      const response = await fetch('/api/whatsapp/status');
+      const response = await fetch('/api/status');
       const data = await response.json();
       
       // Update progress
@@ -528,53 +519,62 @@
       // Hide any existing QR code
       qrCode.classList.add('d-none');
       
-      if (data.connected) {
+      if (data.whatsapp === 'connected') {
         // Connected state
         statusBadge.className = 'status-badge status-connected me-3';
         statusBadge.innerHTML = '<i class="bi bi-check-circle"></i>';
         statusMessage.textContent = 'WhatsApp is connected and ready';
         connectionProgress.className = 'progress-bar bg-success';
         
-        // Show disconnect button
+        // Show disconnect and restart buttons, hide connect button
         disconnectBtn.classList.remove('d-none');
         restartBtn.classList.remove('d-none');
+        connectBtn.classList.add('d-none'); // Ensure connect button is hidden
+        qrCode.classList.add('d-none'); // Ensure QR is hidden
         
-        // Format connection date for display - check if date is valid first
         let formattedDate = 'Unknown';
         let formattedTime = '';
         
-        if (data.connectedSince) {
-          const connectedDate = new Date(data.connectedSince);
-          // Check if date is valid (not 1970/01/01)
-          if (connectedDate.getFullYear() > 1970) {
+        if (data.whatsappConnectedSince) {
+          const connectedDate = new Date(data.whatsappConnectedSince);
+          if (connectedDate.getFullYear() > 1970 && !isNaN(connectedDate)) { // Added !isNaN check
             formattedDate = connectedDate.toLocaleDateString('en-US', { 
               month: 'numeric', 
               day: 'numeric', 
               year: 'numeric' 
             });
-            
             formattedTime = connectedDate.toLocaleTimeString('en-US', {
               hour: 'numeric',
               minute: '2-digit',
-              second: '2-digit',
-              hour12: false
+              // second: '2-digit', // Removed seconds for brevity, can be added back
+              hour12: true // Changed to true for more common display
             });
           }
         }
         
-        // Update details
+        const phoneNumber = data.whatsappInfo && data.whatsappInfo.me && data.whatsappInfo.me.user 
+                            ? data.whatsappInfo.me.user 
+                            : 'Unknown';
+        const pushName = data.whatsappInfo && data.whatsappInfo.me && data.whatsappInfo.me.pushname 
+                            ? data.whatsappInfo.me.pushname 
+                            : 'N/A';
+
         connectionDetails.innerHTML = `
-          <div>
-            <div class="text-secondary mb-1">Connected since</div>
-            <div class="fs-5">${formattedDate}${formattedTime ? ', ' + formattedTime : ''}</div>
+          <div class="mb-2">
+            <small class="text-secondary">Connected Since:</small>
+            <div class="fs-6">${formattedDate}${formattedTime ? ' at ' + formattedTime : ''}</div>
           </div>
-          <div class="mt-3">
-            <div class="text-secondary mb-1">Phone number</div>
-            <div class="fs-5">${data.phone || 'Unknown'}</div>
+          <div class="mb-2">
+            <small class="text-secondary">Phone Number:</small>
+            <div class="fs-6">${phoneNumber}</div>
+          </div>
+          <div>
+            <small class="text-secondary">Profile Name:</small>
+            <div class="fs-6">${pushName}</div>
           </div>
         `;
         
-      } else if (data.qrCode) {
+      } else if (data.whatsappQR) {
         // QR code available - awaiting authentication
         statusBadge.className = 'status-badge status-connecting me-3';
         statusBadge.innerHTML = '<i class="bi bi-qr-code"></i>';
@@ -583,7 +583,7 @@
         
         // Display QR code
         qrCode.classList.remove('d-none');
-        qrCode.innerHTML = data.qrCode;
+        qrCode.innerHTML = data.whatsappQR;
         
         // Clear connection details
         connectionDetails.innerHTML = `
