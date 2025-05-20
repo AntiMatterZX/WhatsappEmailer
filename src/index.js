@@ -8,6 +8,13 @@
 
 // Load environment variables from .env file
 require('dotenv').config();
+
+// Disable Redis in Vercel environment unless explicitly enabled
+if (process.env.VERCEL === '1' && process.env.ENABLE_REDIS !== 'true') {
+  process.env.REDIS_DISABLED = 'true';
+  console.log('Running in Vercel environment - Redis disabled by default');
+}
+
 // Load Redis configuration early to suppress warnings
 require('./utils/redisConfig');
 
@@ -640,10 +647,7 @@ function logEmailEvent(to, subject, status, details) {
   }
 }
 
-/**
- * Graceful shutdown handling
- * Closes database connections and other resources properly
- */
+// Graceful shutdown handling
 process.on('SIGTERM', gracefulShutdown);
 process.on('SIGINT', gracefulShutdown);
 
@@ -656,6 +660,22 @@ function gracefulShutdown() {
       mongoose.connection.close(() => {
         logger.info('MongoDB connection closed');
       });
+    }
+    
+    // Close Redis connections
+    try {
+      const redisConfig = require('./utils/redisConfig');
+      redisConfig.shutdown();
+    } catch (error) {
+      logger.error('Error closing Redis connections:', error.message);
+    }
+    
+    // Close message queue connections
+    try {
+      const messageQueue = require('./queues/messageQueue');
+      messageQueue.shutdownMessageQueue();
+    } catch (error) {
+      logger.error('Error closing message queue:', error.message);
     }
     
     // Close express server

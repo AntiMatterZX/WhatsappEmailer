@@ -6,7 +6,12 @@ const { Queue, Worker } = require('bullmq');
 const nodemailer = require('nodemailer');
 const logger = require('../utils/logger');
 const { extractSchoolName, generateUniqueEmailId, formatEmailSubject } = require('../utils/helpers');
-const { createRedisConnection } = require('../utils/redisConfig');
+const { getSharedConnection } = require('../utils/redisConfig');
+
+// Store workers globally to avoid creating too many
+let helpdeskWorker = null;
+let urgentWorker = null;
+let emailWorker = null;
 
 /**
  * Sets up the message queue system with BullMQ and Redis
@@ -17,7 +22,14 @@ const { createRedisConnection } = require('../utils/redisConfig');
  */
 function setupMessageQueue() {
   try {
-    const connection = createRedisConnection();
+    // Get the shared Redis connection
+    const connection = getSharedConnection();
+    
+    // If Redis connection failed, use the fallback queue
+    if (!connection) {
+      logger.warn('No Redis connection available, using in-memory queue fallback');
+      return new SimpleQueue();
+    }
 
     // Create BullMQ Queue with default job options
     const messageQueue = new Queue('messages', {
@@ -35,10 +47,18 @@ function setupMessageQueue() {
 
     logger.info('BullMQ message queue initialized');
 
-    // Set up workers for different message types
-    setupHelpdeskWorker(connection);
-    setupUrgentWorker(connection);
-    setupEmailWorker(connection);
+    // Set up workers - only if they're not already running
+    if (!helpdeskWorker) {
+      helpdeskWorker = setupHelpdeskWorker(connection);
+    }
+    
+    if (!urgentWorker) {
+      urgentWorker = setupUrgentWorker(connection);
+    }
+    
+    if (!emailWorker) {
+      emailWorker = setupEmailWorker(connection);
+    }
 
     return messageQueue;
   } catch (error) {
@@ -51,6 +71,40 @@ function setupMessageQueue() {
 }
 
 /**
+ * Gracefully close all workers and connections
+ */
+async function shutdownMessageQueue() {
+  try {
+    const shutdownPromises = [];
+    
+    if (helpdeskWorker) {
+      logger.info('Closing helpdesk worker...');
+      shutdownPromises.push(helpdeskWorker.close());
+      helpdeskWorker = null;
+    }
+    
+    if (urgentWorker) {
+      logger.info('Closing urgent worker...');
+      shutdownPromises.push(urgentWorker.close());
+      urgentWorker = null;
+    }
+    
+    if (emailWorker) {
+      logger.info('Closing email worker...');
+      shutdownPromises.push(emailWorker.close());
+      emailWorker = null;
+    }
+    
+    if (shutdownPromises.length > 0) {
+      await Promise.all(shutdownPromises);
+      logger.info('All message queue workers closed');
+    }
+  } catch (error) {
+    logger.error('Error shutting down message queue:', error);
+  }
+}
+
+/**
  * Sets up a worker to process HELPDESK type messages
  * These are typically support requests that need to be forwarded to appropriate staff
  * 
@@ -58,30 +112,39 @@ function setupMessageQueue() {
  * @returns {Object} - Worker instance
  */
 function setupHelpdeskWorker(connection) {
-  const worker = new Worker('messages', async (job) => {
-    if (job.name !== 'HELPDESK') return;
-    
-    logger.info(`Processing helpdesk message job: ${job.id}`);
-    
-    // Process helpdesk message logic here
-    // This would call into messageProcessor or other service
-    
-    return { processed: true, type: 'HELPDESK' };
-  }, { 
-    connection,
-    concurrency: 5,
-    lockDuration: 30000 
-  });
+  try {
+    const worker = new Worker('messages', async (job) => {
+      if (job.name !== 'HELPDESK') return;
+      
+      logger.info(`Processing helpdesk message job: ${job.id}`);
+      
+      // Process helpdesk message logic here
+      // This would call into messageProcessor or other service
+      
+      return { processed: true, type: 'HELPDESK' };
+    }, { 
+      connection,
+      concurrency: 2, // Reduced concurrency to avoid Redis connection limits
+      lockDuration: 30000 
+    });
 
-  worker.on('completed', (job) => {
-    logger.info(`Helpdesk job ${job.id} completed successfully`);
-  });
+    worker.on('completed', (job) => {
+      logger.info(`Helpdesk job ${job.id} completed successfully`);
+    });
 
-  worker.on('failed', (job, error) => {
-    logger.error(`Helpdesk job ${job?.id} failed:`, error);
-  });
+    worker.on('failed', (job, error) => {
+      logger.error(`Helpdesk job ${job?.id} failed:`, error);
+    });
 
-  return worker;
+    worker.on('error', (error) => {
+      logger.error('Helpdesk worker error:', error);
+    });
+
+    return worker;
+  } catch (error) {
+    logger.error('Failed to set up helpdesk worker:', error);
+    return null;
+  }
 }
 
 /**
@@ -92,30 +155,39 @@ function setupHelpdeskWorker(connection) {
  * @returns {Object} - Worker instance
  */
 function setupUrgentWorker(connection) {
-  const worker = new Worker('messages', async (job) => {
-    if (job.name !== 'URGENT') return;
-    
-    logger.info(`Processing urgent message job: ${job.id}`);
-    
-    // Process urgent message logic here
-    // This would call into messageProcessor or other service
-    
-    return { processed: true, type: 'URGENT' };
-  }, { 
-    connection,
-    concurrency: 10,  // Higher concurrency for urgent messages
-    lockDuration: 30000 
-  });
+  try {
+    const worker = new Worker('messages', async (job) => {
+      if (job.name !== 'URGENT') return;
+      
+      logger.info(`Processing urgent message job: ${job.id}`);
+      
+      // Process urgent message logic here
+      // This would call into messageProcessor or other service
+      
+      return { processed: true, type: 'URGENT' };
+    }, { 
+      connection,
+      concurrency: 3,  // Reduced from 10 to avoid connection issues
+      lockDuration: 30000 
+    });
 
-  worker.on('completed', (job) => {
-    logger.info(`Urgent job ${job.id} completed successfully`);
-  });
+    worker.on('completed', (job) => {
+      logger.info(`Urgent job ${job.id} completed successfully`);
+    });
 
-  worker.on('failed', (job, error) => {
-    logger.error(`Urgent job ${job?.id} failed:`, error);
-  });
+    worker.on('failed', (job, error) => {
+      logger.error(`Urgent job ${job?.id} failed:`, error);
+    });
 
-  return worker;
+    worker.on('error', (error) => {
+      logger.error('Urgent worker error:', error);
+    });
+
+    return worker;
+  } catch (error) {
+    logger.error('Failed to set up urgent worker:', error);
+    return null;
+  }
 }
 
 /**
@@ -126,69 +198,71 @@ function setupUrgentWorker(connection) {
  * @returns {Object} - Worker instance
  */
 function setupEmailWorker(connection) {
-  logger.info('EMAIL worker is being created and listening for EMAIL jobs');
-  const worker = new Worker('messages', async (job) => {
-    logger.info(`EMAIL worker received job: ${job.name}`);
-    if (job.name !== 'EMAIL') return;
-    logger.info(`Processing EMAIL job: ${job.id}`);
-    const data = job.data;
-    try {
-      // Extract school name from group name if available
-      const schoolName = data.schoolName || extractSchoolName(data.groupName || data.groupId);
-
-      // Generate unique ID to prevent threading
-      const uniqueId = generateUniqueEmailId();
+  try {
+    logger.info('EMAIL worker is being created and listening for EMAIL jobs');
+    const worker = new Worker('messages', async (job) => {
+      if (job.name !== 'EMAIL') return;
       
-      // Create transporter
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: parseInt(process.env.SMTP_PORT || '465'),
-        secure: true,
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS
-        }
-      });
-      await transporter.verify();
+      logger.info(`Processing EMAIL job: ${job.id}`);
+      const data = job.data;
+      try {
+        // Extract school name from group name if available
+        const schoolName = data.schoolName || extractSchoolName(data.groupName || data.groupId);
 
-      // Send email with RFC 5322 compliant Message-ID header
-      const info = await transporter.sendMail({
-        from: `"WhatsApp Bot" <${process.env.SMTP_USER}>`,
-        to: data.to || process.env.HELPDESK_EMAIL,
-        subject: formatEmailSubject(schoolName, data.subject || 'WhatsApp Notification'),
-        messageId: `<${new Date().getTime()}.${uniqueId.replace(/[^a-zA-Z0-9]/g, '')}@${process.env.EMAIL_DOMAIN || 'whatsapp-bot.stemrobo.com'}>`,
-        references: [],
-        inReplyTo: '',
-        headers: {
-          'X-Entity-Ref-ID': uniqueId,
-          'X-School-Name': schoolName,
-          'X-Group-ID': data.groupId || 'unknown-group'
-        },
-        text: `School: ${schoolName}\nGroup: ${data.groupId || 'Unknown Group'}\nSender: ${data.sender || 'Unknown'}\n\n${data.content || ''}`,
-        html: `<div style=\"font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden;\">\n  <div style=\"background: linear-gradient(135deg, #6a5acd, #4169e1); color: white; padding: 20px; text-align: center;\">\n    <img src=\"https://elasticbeanstalk-ap-south-1-954976323838.s3.ap-south-1.amazonaws.com/varun/stemrobo-final1+(1).png\" alt=\"STEMROBO Logo\" class=\"logo\" width=\"220\" style=\"display: block; margin: 0 auto;\">\n    <h2>${schoolName} - Notification</h2>\n  </div>\n  <div style=\"padding: 20px;\">\n    <table style=\"width: 100%; border-collapse: collapse;\">\n      <tr>\n        <td style=\"padding: 8px; border-bottom: 1px solid #e0e0e0; font-weight: bold; width: 100px;\">School:</td>\n        <td style=\"padding: 8px; border-bottom: 1px solid #e0e0e0;\">${schoolName}</td>\n      </tr>\n      <tr>\n        <td style=\"padding: 8px; border-bottom: 1px solid #e0e0e0; font-weight: bold;\">Group:</td>\n        <td style=\"padding: 8px; border-bottom: 1px solid #e0e0e0;\">${data.groupId || 'Unknown'} </td>\n      </tr>\n      <tr>\n        <td style=\"padding: 8px; border-bottom: 1px solid #e0e0e0; font-weight: bold;\">Sender:</td>\n        <td style=\"padding: 8px; border-bottom: 1px solid #e0e0e0;\">${data.sender || 'Unknown'}</td>\n      </tr>\n      <tr>\n        <td style=\"padding: 8px; border-bottom: 1px solid #e0e0e0; font-weight: bold;\">Time:</td>\n        <td style=\"padding: 8px; border-bottom: 1px solid #e0e0e0;\">${new Date().toLocaleString()}</td>\n      </tr>\n    </table>\n    <div style=\"margin-top: 20px; padding: 15px; background-color: #f9f9f9; border-radius: 6px;\">\n      <h3 style=\"margin-top: 0; color: #4169e1;\">Message:</h3>\n      <div>${data.content || ''}</div>\n    </div>\n  </div>\n  <div style=\"background-color: #f0f7ff; padding: 15px; text-align: center; font-size: 14px; color: #666;\">\n    <p>This is an automated message from the WhatsApp Bot system.</p>\n    <p>ID: ${uniqueId}</p>\n  </div>\n</div>`
-      });
-      
-      logger.info(`EMAIL job sent: ${info.messageId}`);
-      return { processed: true, type: 'EMAIL', messageId: info.messageId };
-    } catch (error) {
-      logger.error('EMAIL job failed:', error);
-      throw error;
-    }
-  }, {
-    connection,
-    concurrency: 2,
-    lockDuration: 30000
-  });
+        // Generate unique ID to prevent threading
+        const uniqueId = generateUniqueEmailId();
+        
+        // Create transporter
+        const transporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST,
+          port: parseInt(process.env.SMTP_PORT || '465'),
+          secure: true,
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS
+          }
+        });
+        
+        await transporter.verify();
+        
+        const info = await transporter.sendMail({
+          from: `"WhatsApp Bot" <${process.env.SMTP_USER}>`,
+          to: data.to,
+          cc: data.cc,
+          subject: formatEmailSubject(data.subject || 'WhatsApp Message Notification', schoolName),
+          text: `${data.message}\n\nSent from: ${data.from}\nGroup: ${data.groupName || data.groupId}\n\nThis is an automated message from the WhatsApp Bot system.\nID: ${uniqueId}`,
+          html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">\n  <h2 style="color: #4a6ee0;">WhatsApp Message Notification</h2>\n  <p><strong>From:</strong> ${data.from}</p>\n  <p><strong>Group:</strong> ${data.groupName || data.groupId}</p>\n  <div style="background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin: 15px 0;">\n    <p>${data.message.replace(/\n/g, '<br>')}</p>\n  </div>\n  <div style="color: #666; font-size: 12px; margin-top: 20px; padding-top: 10px; border-top: 1px solid #e0e0e0;">\n    <p>This is an automated message from the WhatsApp Bot system.</p>\n    <p>ID: ${uniqueId}</p>\n  </div>\n</div>`
+        });
+        
+        logger.info(`EMAIL job sent: ${info.messageId}`);
+        return { processed: true, type: 'EMAIL', messageId: info.messageId };
+      } catch (error) {
+        logger.error('EMAIL job failed:', error);
+        throw error;
+      }
+    }, {
+      connection,
+      concurrency: 1, // Reduced from 2 to avoid connection issues
+      lockDuration: 30000
+    });
 
-  worker.on('completed', (job) => {
-    logger.info(`EMAIL job ${job.id} completed successfully`);
-  });
+    worker.on('completed', (job) => {
+      logger.info(`EMAIL job ${job.id} completed successfully`);
+    });
 
-  worker.on('failed', (job, error) => {
-    logger.error(`EMAIL job ${job?.id} failed:`, error);
-  });
+    worker.on('failed', (job, error) => {
+      logger.error(`EMAIL job ${job?.id} failed:`, error);
+    });
 
-  return worker;
+    worker.on('error', (error) => {
+      logger.error('Email worker error:', error);
+    });
+
+    return worker;
+  } catch (error) {
+    logger.error('Failed to set up email worker:', error);
+    return null;
+  }
 }
 
 /**
@@ -248,19 +322,58 @@ class SimpleQueue {
   }
 
   /**
-   * Get active jobs (compatibility method)
-   * @returns {Array} - Empty array in simple implementation
+   * Process HELPDESK messages in the memory queue
+   * @param {Object} data - Message data
    */
-  async getActive() {
-    return [];
+  async processHelpdeskMessage(data) {
+    logger.info('Processing helpdesk message in SimpleQueue');
+    // Implement simple helpdesk processing logic here
   }
 
   /**
-   * Get waiting jobs
-   * @returns {Array} - Array of jobs in the queue
+   * Process URGENT messages in the memory queue
+   * @param {Object} data - Message data
    */
-  async getWaiting() {
-    return this.queue;
+  async processUrgentMessage(data) {
+    logger.info('Processing urgent message in SimpleQueue');
+    // Implement simple urgent processing logic here
+  }
+
+  /**
+   * Process EMAIL messages in the memory queue
+   * @param {Object} data - Message data
+   */
+  async processEmailMessage(data) {
+    logger.info('Processing email message in SimpleQueue');
+    try {
+      // Simple implementation to send emails directly
+      if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+        const transporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST,
+          port: parseInt(process.env.SMTP_PORT || '465'),
+          secure: true,
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS
+          }
+        });
+        
+        await transporter.sendMail({
+          from: `"WhatsApp Bot" <${process.env.SMTP_USER}>`,
+          to: data.to,
+          cc: data.cc,
+          subject: data.subject || 'WhatsApp Message Notification',
+          text: `${data.message}\n\nSent from: ${data.from}\nGroup: ${data.groupName || data.groupId}`,
+          html: `<div><p>${data.message}</p><p>From: ${data.from}</p><p>Group: ${data.groupName || data.groupId}</p></div>`
+        });
+        
+        logger.info('Email sent via SimpleQueue');
+      } else {
+        logger.error('Cannot send email: SMTP credentials not configured');
+      }
+    } catch (error) {
+      logger.error('Error sending email via SimpleQueue:', error);
+    }
   }
 
   /**
@@ -280,39 +393,32 @@ class SimpleQueue {
   }
 
   /**
-   * Clean the queue
-   * @returns {boolean} - Success indicator
+   * Get waiting jobs (compatibility method)
+   * @returns {Array} - Current job list in simple implementation
    */
-  async clean() {
-    this.queue = [];
-    return true;
+  async getWaiting() {
+    return this.queue;
   }
 
   /**
-   * Process a helpdesk message
-   * @param {Object} data - Message data
+   * Pause the queue (compatibility method)
    */
-  async processHelpdeskMessage(data) {
-    logger.info('Processing helpdesk message:', data);
+  async pause() {
+    logger.info('SimpleQueue paused');
   }
 
   /**
-   * Process an urgent message
-   * @param {Object} data - Message data
+   * Resume the queue (compatibility method)
    */
-  async processUrgentMessage(data) {
-    logger.info('Processing urgent message:', data);
-  }
-
-  /**
-   * Process an email message
-   * @param {Object} data - Message data
-   */
-  async processEmailMessage(data) {
-    logger.info('Processing email message:', data);
+  async resume() {
+    logger.info('SimpleQueue resumed');
+    if (!this.processing && this.queue.length > 0) {
+      this.process();
+    }
   }
 }
 
 module.exports = {
-  setupMessageQueue
+  setupMessageQueue,
+  shutdownMessageQueue
 }; 
