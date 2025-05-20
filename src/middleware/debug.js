@@ -17,39 +17,30 @@ function debugMiddleware(req, res, next) {
     return next();
   }
   
-  const now = new Date().toISOString();
-  const method = req.method;
-  const path = req.path;
-  const sessionID = req.sessionID || 'no-session-id';
-  const hasSession = !!(req.session);
-  const hasUser = !!(req.session && req.session.user);
-  const username = hasUser ? req.session.user.username : 'not-logged-in';
+  try {
+    // Basic request information
+    const method = req.method;
+    const path = req.path;
+    
+    // Session information - with safe access
+    const sessionID = req.sessionID || 'no-session-id';
+    const hasSession = !!req.session;
+    const hasUser = !!(req.session && req.session.user);
+    
+    // Simple log entry to avoid potential serialization issues
+    logger.debug(`REQUEST: ${method} ${path} | Session: ${sessionID} | LoggedIn: ${hasUser}`);
+    
+    // Safely attach debug info to response locals
+    res.locals.debugInfo = {
+      sessionExists: hasSession,
+      userExists: hasUser
+    };
+  } catch (error) {
+    // Fail safe - don't let debug middleware crash the app
+    logger.error('Debug middleware error:', error.message);
+  }
   
-  // Create a debug log entry
-  const logEntry = {
-    time: now,
-    method,
-    path,
-    sessionID,
-    hasSession,
-    hasUser,
-    username,
-    userAgent: req.get('User-Agent'),
-    cookies: req.cookies ? Object.keys(req.cookies).join(',') : 'none',
-    host: req.get('Host'),
-    deployment: process.env.VERCEL ? 'Vercel' : 'Non-Vercel'
-  };
-  
-  // Log the entry
-  logger.debug(`REQUEST: ${method} ${path} | Session: ${sessionID} | User: ${username}`, { debug: logEntry });
-  
-  // Attach debug info to the response for potential client-side debugging
-  res.locals.debugInfo = {
-    sessionExists: hasSession,
-    userExists: hasUser,
-    timestamp: now
-  };
-  
+  // Always continue to next middleware
   next();
 }
 

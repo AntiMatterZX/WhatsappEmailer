@@ -66,23 +66,21 @@ app.use(session({
     mongoUrl: process.env.MONGODB_URI,
     ttl: 14 * 24 * 60 * 60, // 14 days
     autoRemove: 'native',
-    touchAfter: 24 * 3600, // time period in seconds - update session only once per 24h
+    touchAfter: 24 * 3600, // time period in seconds
     crypto: {
-      secret: process.env.SESSION_SECRET || 'whatsapp-bot-secret' // Use same secret for consistency
+      secret: process.env.SESSION_SECRET || 'whatsapp-bot-secret'
     },
-    // Error handling for mongo connection issues
-    clientPromise: mongoose.connection.asPromise().then(connection => connection.getClient()),
-    collectionName: 'sessions', // Use a dedicated collection for sessions
-    stringify: false, // Don't stringify session data (more efficient)
+    collectionName: 'sessions',
+    stringify: false
   }),
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    sameSite: 'lax', // Prevents CSRF while allowing most cross-site requests
+    sameSite: 'lax',
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   },
-  name: 'whatsapp.sid', // Custom cookie name to avoid conflicts
-  rolling: true // Reset cookie expiration on each response
+  name: 'whatsapp.sid',
+  rolling: true
 }));
 
 // Flash messages
@@ -239,20 +237,42 @@ client.on('message_create', async (msg) => {
 
 // Root route renders home page
 app.get('/', (req, res) => {
-  // Debug logging to trace session state
-  const hasSession = !!(req.session && req.session.user);
-  logger.debug(`Home route - SessionID: ${req.sessionID}, Has user: ${hasSession}`);
-  
-  // If the user is logged in, redirect directly to dashboard
-  if (hasSession) {
-    return res.redirect('/dashboard');
+  try {
+    // Debug logging with safe access
+    const hasSession = !!(req.session && req.session.user);
+    
+    // If the user is logged in, redirect directly to dashboard
+    if (hasSession) {
+      return res.redirect('/dashboard');
+    }
+    
+    // Otherwise render the home page with explicit user null check
+    return res.render('home', { 
+      title: 'WhatsApp Bot Admin - Home',
+      user: null
+    });
+  } catch (error) {
+    // Log error but don't crash
+    logger.error('Error in root route:', error.message);
+    
+    // Render a simpler page without any session dependencies
+    return res.status(200).send(`
+      <html>
+        <head>
+          <title>WhatsApp Bot Admin</title>
+          <style>
+            body { font-family: Arial, sans-serif; text-align: center; padding-top: 50px; }
+            a { display: inline-block; margin: 20px; padding: 10px 20px; background: #4CAF50; color: white; text-decoration: none; border-radius: 5px; }
+          </style>
+        </head>
+        <body>
+          <h1>WhatsApp Bot Admin</h1>
+          <p>Welcome to the WhatsApp Bot Administration Portal</p>
+          <a href="/login">Login to Dashboard</a>
+        </body>
+      </html>
+    `);
   }
-  
-  // Otherwise render the home page with explicit user null check
-  res.render('home', { 
-    title: 'WhatsApp Bot Admin - Home',
-    user: req.session?.user || null
-  });
 });
 
 // Authentication routes
@@ -334,23 +354,32 @@ app.get('/api/status', (req, res) => {
 
 // Add diagnostic endpoint for session debugging
 app.get('/debug-session', (req, res) => {
-  const sessionInfo = {
-    hasSession: !!req.session,
-    sessionID: req.sessionID || 'none',
-    hasUser: !!(req.session && req.session.user),
-    userData: req.session?.user ? {
-      username: req.session.user.username,
-      role: req.session.user.role
-    } : null,
-    cookies: req.cookies ? Object.keys(req.cookies) : [],
-    env: {
-      NODE_ENV: process.env.NODE_ENV,
-      VERCEL: !!process.env.VERCEL,
-      VERCEL_ENV: process.env.VERCEL_ENV || 'not-set'
-    }
-  };
-  
-  res.json(sessionInfo);
+  try {
+    const sessionInfo = {
+      hasSession: !!req.session,
+      sessionID: req.sessionID || 'none',
+      hasUser: !!(req.session && req.session.user),
+      userData: req.session?.user ? {
+        username: req.session.user.username,
+        role: req.session.user.role
+      } : null,
+      cookies: req.cookies ? Object.keys(req.cookies) : [],
+      env: {
+        NODE_ENV: process.env.NODE_ENV || 'not-set',
+        VERCEL: !!process.env.VERCEL,
+        VERCEL_ENV: process.env.VERCEL_ENV || 'not-set'
+      }
+    };
+    
+    return res.json(sessionInfo);
+  } catch (error) {
+    logger.error('Error in debug-session route:', error.message);
+    return res.status(200).json({
+      error: 'Error generating debug info',
+      message: process.env.NODE_ENV === 'production' ? 'Internal server error' : error.message,
+      time: new Date().toISOString()
+    });
+  }
 });
 
 // Error handling middleware
