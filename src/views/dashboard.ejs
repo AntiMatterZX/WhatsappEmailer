@@ -508,7 +508,7 @@
       connectionProgress.style.width = '30%';
       connectionProgress.className = 'progress-bar bg-info';
       
-      const response = await fetch('/api/status');
+      const response = await fetch('/api/whatsapp/status');
       const data = await response.json();
       
       // Update progress
@@ -524,8 +524,10 @@
       
       // Hide any existing QR code
       qrCode.classList.add('d-none');
+      qrCode.innerHTML = '';
       
-      if (data.whatsapp === 'connected') {
+      // Check status and update UI accordingly
+      if (data.state === 'connected') {
         // Connected state
         statusBadge.className = 'status-badge status-connected me-3';
         statusBadge.innerHTML = '<i class="bi bi-check-circle"></i>';
@@ -535,40 +537,25 @@
         // Show disconnect and restart buttons, hide connect button
         disconnectBtn.classList.remove('d-none');
         restartBtn.classList.remove('d-none');
-        connectBtn.classList.add('d-none'); // Ensure connect button is hidden
-        qrCode.classList.add('d-none'); // Ensure QR is hidden
         
         let formattedDate = 'Unknown';
         let formattedTime = '';
         
-        if (data.whatsappConnectedSince) {
-          const connectedDate = new Date(data.whatsappConnectedSince);
-          if (connectedDate.getFullYear() > 1970 && !isNaN(connectedDate)) { // Added !isNaN check
-            formattedDate = connectedDate.toLocaleDateString('en-US', { 
-              month: 'numeric', 
-              day: 'numeric', 
-              year: 'numeric' 
-            });
-            formattedTime = connectedDate.toLocaleTimeString('en-US', {
-              hour: 'numeric',
-              minute: '2-digit',
-              // second: '2-digit', // Removed seconds for brevity, can be added back
-              hour12: true // Changed to true for more common display
-            });
+        if (data.connectedSince) {
+          const connectedDate = new Date(data.connectedSince);
+          if (!isNaN(connectedDate)) {
+            formattedDate = connectedDate.toLocaleDateString();
+            formattedTime = connectedDate.toLocaleTimeString();
           }
         }
         
-        const phoneNumber = data.whatsappInfo && data.whatsappInfo.me && data.whatsappInfo.me.user 
-                            ? data.whatsappInfo.me.user 
-                            : 'Unknown';
-        const pushName = data.whatsappInfo && data.whatsappInfo.me && data.whatsappInfo.me.pushname 
-                            ? data.whatsappInfo.me.pushname 
-                            : 'N/A';
+        const phoneNumber = data.phone || 'Unknown';
+        const pushName = data.info?.me?.pushname || 'Unknown';
 
         connectionDetails.innerHTML = `
           <div class="mb-2">
             <small class="text-secondary">Connected Since:</small>
-            <div class="fs-6">${formattedDate}${formattedTime ? ' at ' + formattedTime : ''}</div>
+            <div class="fs-6">${formattedDate} ${formattedTime}</div>
           </div>
           <div class="mb-2">
             <small class="text-secondary">Phone Number:</small>
@@ -579,8 +566,8 @@
             <div class="fs-6">${pushName}</div>
           </div>
         `;
-        
-      } else if (data.whatsappQR) {
+      } 
+      else if (data.state === 'qr_ready' && data.qrCode) {
         // QR code available - awaiting authentication
         statusBadge.className = 'status-badge status-connecting me-3';
         statusBadge.innerHTML = '<i class="bi bi-qr-code"></i>';
@@ -589,7 +576,7 @@
         
         // Display QR code
         qrCode.classList.remove('d-none');
-        qrCode.innerHTML = data.whatsappQR;
+        qrCode.innerHTML = data.qrCode;
         
         // Clear connection details
         connectionDetails.innerHTML = `
@@ -601,10 +588,64 @@
           </div>
         `;
         
-        // Show restart button
+        // Show restart button to allow restarting if QR scan fails
         restartBtn.classList.remove('d-none');
-      } else {
-        // Disconnected state
+      }
+      else if (data.state === 'connecting' || data.state === 'initializing') {
+        // Connecting or initializing state
+        statusBadge.className = 'status-badge status-connecting me-3';
+        statusBadge.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+        statusMessage.textContent = 'Connecting to WhatsApp...';
+        connectionProgress.className = 'progress-bar bg-warning progress-bar-striped progress-bar-animated';
+        connectionProgress.style.width = '50%';
+        
+        // Clear connection details
+        connectionDetails.innerHTML = `
+          <div class="alert alert-warning p-2">
+            <small>
+              <i class="bi bi-hourglass-split me-1"></i>
+              Initializing WhatsApp connection, please wait...
+            </small>
+          </div>
+        `;
+        
+        // Show only restart button during connecting state
+        restartBtn.classList.remove('d-none');
+        
+        // Check again in 3 seconds for updated status
+        setTimeout(() => {
+          checkWhatsAppStatus();
+        }, 3000);
+      }
+      else if (data.state === 'error') {
+        // Error state
+        statusBadge.className = 'status-badge status-disconnected me-3';
+        statusBadge.innerHTML = '<i class="bi bi-exclamation-triangle"></i>';
+        statusMessage.textContent = 'WhatsApp connection error';
+        connectionProgress.className = 'progress-bar bg-danger';
+        
+        // Show connect and restart buttons
+        connectBtn.classList.remove('d-none');
+        restartBtn.classList.remove('d-none');
+        
+        // Show error details
+        connectionDetails.innerHTML = `
+          <div class="alert alert-danger p-2">
+            <small>
+              <i class="bi bi-exclamation-triangle me-1"></i>
+              Connection error: ${data.error || 'Unknown error'}
+            </small>
+          </div>
+          <div class="alert alert-secondary p-2 bg-dark border-secondary">
+            <small>
+              <i class="bi bi-info-circle me-1"></i>
+              Click "Connect" to try generating a new QR code.
+            </small>
+          </div>
+        `;
+      }
+      else {
+        // Disconnected state (fallback for any other state)
         statusBadge.className = 'status-badge status-disconnected me-3';
         statusBadge.innerHTML = '<i class="bi bi-x-circle"></i>';
         statusMessage.textContent = 'WhatsApp is disconnected';
@@ -612,7 +653,6 @@
         
         // Show connect button
         connectBtn.classList.remove('d-none');
-        restartBtn.classList.remove('d-none');
         
         // Clear connection details
         connectionDetails.innerHTML = `
@@ -623,7 +663,7 @@
         `;
       }
       
-      // Remove existing event listeners by cloning and replacing elements
+      // Reset button event listeners by creating new button elements
       const newRestartBtn = restartBtn.cloneNode(true);
       const newConnectBtn = connectBtn.cloneNode(true);
       const newDisconnectBtn = disconnectBtn.cloneNode(true);
@@ -632,15 +672,10 @@
       connectBtn.parentNode.replaceChild(newConnectBtn, connectBtn);
       disconnectBtn.parentNode.replaceChild(newDisconnectBtn, disconnectBtn);
       
-      // Update our references to the buttons
-      const updatedRestartBtn = document.getElementById('restartClient');
-      const updatedConnectBtn = document.getElementById('connectBtn');
-      const updatedDisconnectBtn = document.getElementById('disconnectBtn');
-      
-      // Add event listeners to the updated elements
-      updatedRestartBtn.addEventListener('click', restartWhatsAppClient);
-      updatedConnectBtn.addEventListener('click', connectWhatsApp);
-      updatedDisconnectBtn.addEventListener('click', disconnectWhatsApp);
+      // Add event listeners to the new buttons
+      document.getElementById('restartClient').addEventListener('click', restartWhatsAppClient);
+      document.getElementById('connectBtn').addEventListener('click', connectWhatsApp);
+      document.getElementById('disconnectBtn').addEventListener('click', disconnectWhatsApp);
       
     } catch (error) {
       console.error('Error checking WhatsApp status:', error);
@@ -662,6 +697,8 @@
         </div>
       `;
       
+      // Show connect and restart buttons on error
+      connectBtn.classList.remove('d-none');
       restartBtn.classList.remove('d-none');
     }
   }

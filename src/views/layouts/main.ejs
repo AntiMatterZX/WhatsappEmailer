@@ -179,8 +179,22 @@
           <span class="position-absolute top-0 end-0 translate-middle badge rounded-pill bg-primary">1</span>
         </button>
         <% if (typeof user !== 'undefined' && user && user.username) { %>
-          <div class="project-badge project-badge-large d-flex align-items-center justify-content-center">
-            <span><%= user.username.charAt(0).toUpperCase() %></span>
+          <div class="dropdown">
+            <div class="project-badge project-badge-large d-flex align-items-center justify-content-center dropdown-toggle" 
+                 id="profileDropdown" 
+                 data-bs-toggle="dropdown" 
+                 aria-expanded="false"
+                 style="cursor: pointer;">
+              <span><%= user.username.charAt(0).toUpperCase() %></span>
+            </div>
+            <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" aria-labelledby="profileDropdown">
+              <li><span class="dropdown-item-text text-white-50">Hello, <%= user.username %></span></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item" href="/profile"><i class="bi bi-person me-2"></i>Profile</a></li>
+              <li><a class="dropdown-item" href="/settings"><i class="bi bi-gear me-2"></i>Settings</a></li>
+              <li><hr class="dropdown-divider"></li>
+              <li><a class="dropdown-item text-danger" href="/logout"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>
+            </ul>
           </div>
         <% } else { %>
           <div class="project-badge project-badge-large">

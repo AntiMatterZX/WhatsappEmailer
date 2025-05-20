@@ -1777,3 +1777,54 @@
 {"level":"info","message":"WhatsApp client authenticated","service":"whatsapp-bot","timestamp":"2025-05-20 13:51:26"}
 {"level":"info","message":"WhatsApp client is ready!","service":"whatsapp-bot","timestamp":"2025-05-20 13:51:27"}
 {"level":"info","message":"User logged in: admin","service":"whatsapp-bot","timestamp":"2025-05-20 13:51:33"}
+{"level":"info","message":"WhatsApp client disconnect requested by user: admin","service":"whatsapp-bot","timestamp":"2025-05-20 13:51:43"}
+{"level":"info","message":"Attempting to clear session data at: C:\\whatsapp_bot\\.wwebjs_auth\\session","service":"whatsapp-bot","timestamp":"2025-05-20 13:51:43"}
+{"code":"EPERM","errno":-4048,"level":"error","message":"Error clearing session data: EPERM: operation not permitted, unlink 'C:\\whatsapp_bot\\.wwebjs_auth\\session\\session'","path":"C:\\whatsapp_bot\\.wwebjs_auth\\session\\session","service":"whatsapp-bot","stack":"Error: EPERM: operation not permitted, unlink 'C:\\whatsapp_bot\\.wwebjs_auth\\session\\session'\n    at Object.unlinkSync (node:fs:1953:11)\n    at C:\\whatsapp_bot\\src\\routes\\api-routes.js:179:18\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)","syscall":"unlink","timestamp":"2025-05-20 13:51:43"}
+{"level":"info","message":"Initialized shared Redis connection pool","service":"whatsapp-bot","timestamp":"2025-05-20 14:09:29"}
+{"level":"info","message":"Using MongoDB session store","service":"whatsapp-bot","timestamp":"2025-05-20 14:09:30"}
+{"level":"info","message":"BullMQ message queue initialized","service":"whatsapp-bot","timestamp":"2025-05-20 14:09:30"}
+{"level":"info","message":"EMAIL worker is being created and listening for EMAIL jobs","service":"whatsapp-bot","timestamp":"2025-05-20 14:09:30"}
+{"level":"warn","message":"Port 3000 is already in use, trying next port","service":"whatsapp-bot","timestamp":"2025-05-20 14:09:30"}
+{"level":"info","message":"WhatsApp Bot server started on port 3000","service":"whatsapp-bot","timestamp":"2025-05-20 14:09:30"}
+{"level":"info","message":"WhatsApp Bot server started on port 3001","service":"whatsapp-bot","timestamp":"2025-05-20 14:09:30"}
+{"level":"info","message":"⚡ WhatsApp Bot API is ready (development mode)  - PORT: 3001","service":"whatsapp-bot","timestamp":"2025-05-20 14:09:30"}
+{"level":"info","message":"Redis connected successfully","service":"whatsapp-bot","timestamp":"2025-05-20 14:09:30"}
+{"level":"info","message":"Redis CONFIG SET not supported, but warnings have been suppressed","service":"whatsapp-bot","timestamp":"2025-05-20 14:09:30"}
+{"level":"info","message":"Connected to MongoDB","service":"whatsapp-bot","timestamp":"2025-05-20 14:09:30"}
+{"level":"info","message":"WhatsApp client authenticated","service":"whatsapp-bot","timestamp":"2025-05-20 14:09:38"}
+{"level":"info","message":"WhatsApp client is ready!","service":"whatsapp-bot","timestamp":"2025-05-20 14:09:38"}
+{"level":"info","message":"Received shutdown signal, closing connections...","service":"whatsapp-bot","timestamp":"2025-05-20 14:10:02"}
+{"level":"info","message":"WhatsApp client disconnect requested by user: admin","service":"whatsapp-bot","timestamp":"2025-05-20 14:10:24"}
+{"level":"info","message":"Attempting to destroy WhatsApp client...","service":"whatsapp-bot","timestamp":"2025-05-20 14:10:24"}
+{"level":"info","message":"WhatsApp client logged out successfully","service":"whatsapp-bot","timestamp":"2025-05-20 14:10:24"}
+{"level":"info","message":"WhatsApp client destroyed successfully","service":"whatsapp-bot","timestamp":"2025-05-20 14:10:24"}
+{"level":"info","message":"Attempting to clean session folder: C:\\whatsapp_bot\\.wwebjs_auth\\session","service":"whatsapp-bot","timestamp":"2025-05-20 14:10:25"}
+{"level":"info","message":"Found 3 files in session directory","service":"whatsapp-bot","timestamp":"2025-05-20 14:10:25"}
+{"level":"warn","message":"Could not delete session file Crashpad: EPERM: operation not permitted, unlink 'C:\\whatsapp_bot\\.wwebjs_auth\\session\\session\\Crashpad'","service":"whatsapp-bot","timestamp":"2025-05-20 14:10:25"}
+{"level":"warn","message":"Could not delete session file Default: EPERM: operation not permitted, unlink 'C:\\whatsapp_bot\\.wwebjs_auth\\session\\session\\Default'","service":"whatsapp-bot","timestamp":"2025-05-20 14:10:25"}
+{"level":"info","message":"Deleted session file: DevToolsActivePort","service":"whatsapp-bot","timestamp":"2025-05-20 14:10:25"}
+{"level":"info","message":"No multi-device session directory found or error accessing it: ENOENT: no such file or directory, scandir 'C:\\whatsapp_bot\\.wwebjs_auth\\session\\session-MultiDevice'","service":"whatsapp-bot","timestamp":"2025-05-20 14:10:25"}
+{"level":"info","message":"WhatsApp client connect requested by user: admin","service":"whatsapp-bot","timestamp":"2025-05-20 14:10:32"}
+{"level":"info","message":"Created new WhatsApp client instance","service":"whatsapp-bot","timestamp":"2025-05-20 14:10:32"}
+{"level":"info","message":"Starting WhatsApp client initialization","service":"whatsapp-bot","timestamp":"2025-05-20 14:10:32"}
+{"level":"info","message":"QR Code received for WhatsApp authentication","service":"whatsapp-bot","timestamp":"2025-05-20 14:10:36"}
+{"level":"info","message":"QR code saved to app state for UI display","service":"whatsapp-bot","timestamp":"2025-05-20 14:10:36"}
+{"level":"info","message":"WhatsApp client restart requested by user: admin","service":"whatsapp-bot","timestamp":"2025-05-20 14:10:54"}
+{"level":"info","message":"WhatsApp client destroyed successfully for restart","service":"whatsapp-bot","timestamp":"2025-05-20 14:10:54"}
+{"code":"ERR_HTTP_INVALID_HEADER_VALUE","level":"error","message":"Error initiating new WhatsApp connection after restart: Invalid value \"undefined\" for header \"Authorization\"","service":"whatsapp-bot","stack":"TypeError [ERR_HTTP_INVALID_HEADER_VALUE]: Invalid value \"undefined\" for header \"Authorization\"\n    at ClientRequest.setHeader (node:_http_outgoing:702:3)\n    at new ClientRequest (node:_http_client:302:14)\n    at request (node:http:102:10)\n    at Timeout._onTimeout (C:\\whatsapp_bot\\src\\routes\\api-routes.js:244:28)\n    at listOnTimeout (node:internal/timers:594:17)\n    at process.processTimers (node:internal/timers:529:7)","timestamp":"2025-05-20 14:10:55"}
+{"level":"info","message":"WhatsApp client connect requested by user: admin","service":"whatsapp-bot","timestamp":"2025-05-20 14:10:58"}
+{"level":"info","message":"Created new WhatsApp client instance","service":"whatsapp-bot","timestamp":"2025-05-20 14:10:58"}
+{"level":"info","message":"Starting WhatsApp client initialization","service":"whatsapp-bot","timestamp":"2025-05-20 14:10:58"}
+{"level":"warn","message":"WhatsApp page URL unexpected:","service":"whatsapp-bot","timestamp":"2025-05-20 14:10:58"}
+{"level":"info","message":"QR Code received for WhatsApp authentication","service":"whatsapp-bot","timestamp":"2025-05-20 14:11:02"}
+{"level":"info","message":"QR code saved to app state for UI display","service":"whatsapp-bot","timestamp":"2025-05-20 14:11:02"}
+{"level":"info","message":"Received shutdown signal, closing connections...","service":"whatsapp-bot","timestamp":"2025-05-20 14:11:08"}
+{"level":"info","message":"Initialized shared Redis connection pool","service":"whatsapp-bot","timestamp":"2025-05-20 14:11:36"}
+{"level":"info","message":"Using MongoDB session store","service":"whatsapp-bot","timestamp":"2025-05-20 14:11:37"}
+{"level":"info","message":"BullMQ message queue initialized","service":"whatsapp-bot","timestamp":"2025-05-20 14:11:37"}
+{"level":"info","message":"EMAIL worker is being created and listening for EMAIL jobs","service":"whatsapp-bot","timestamp":"2025-05-20 14:11:37"}
+{"level":"info","message":"WhatsApp Bot server started on port 3000","service":"whatsapp-bot","timestamp":"2025-05-20 14:11:37"}
+{"level":"info","message":"⚡ WhatsApp Bot API is ready (development mode)  - PORT: 3000","service":"whatsapp-bot","timestamp":"2025-05-20 14:11:37"}
+{"level":"info","message":"Redis connected successfully","service":"whatsapp-bot","timestamp":"2025-05-20 14:11:37"}
+{"level":"info","message":"Redis CONFIG SET not supported, but warnings have been suppressed","service":"whatsapp-bot","timestamp":"2025-05-20 14:11:37"}
+{"level":"info","message":"Connected to MongoDB","service":"whatsapp-bot","timestamp":"2025-05-20 14:11:38"}

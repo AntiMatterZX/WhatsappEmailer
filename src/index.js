@@ -72,9 +72,11 @@ const sessionConfig = {
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    sameSite: 'lax' // Helps with CSRF protection
   },
-  name: 'whatsapp.sid'
+  name: 'whatsapp.sid',
+  rolling: true // Reset cookie expiration on each request
 };
 
 // Only use MongoDB session store if not on Vercel or explicitly enabled
@@ -94,12 +96,27 @@ if (!process.env.VERCEL || process.env.ENABLE_MONGO_SESSIONS === 'true') {
   logger.info('Using in-memory session store for Vercel deployment');
 }
 
-// Apply session middleware with error handling
+// Apply session middleware with improved error handling
 app.use((req, res, next) => {
+  // Setup session middleware with error handling
   session(sessionConfig)(req, res, (err) => {
     if (err) {
       logger.error('Session middleware error:', err);
-      // Continue without session
+      
+      // If in a Vercel environment, try to provide a fallback session experience
+      if (process.env.VERCEL === '1') {
+        // Create a minimal req.session object to prevent errors in routes
+        req.session = {
+          cookie: {},
+          // Add emergency save method to prevent errors
+          save: (callback) => {
+            if (typeof callback === 'function') callback();
+          }
+        };
+        logger.warn('Created fallback session object for Vercel environment');
+      }
+      
+      // Continue even with session error
       next();
     } else {
       next();

@@ -8,6 +8,15 @@
   
   <div class="card login-card">
     <div class="card-body">
+      <% if (process.env.VERCEL === '1') { %>
+        <div class="alert alert-info mb-3" role="alert">
+          <small>
+            <i class="bi bi-info-circle me-1"></i>
+            This app is hosted on Vercel. If you experience login issues, try clearing your browser cookies or using a private/incognito window.
+          </small>
+        </div>
+      <% } %>
+      
       <form action="/login" method="POST">
         <div class="form-floating">
           <input type="text" class="form-control" id="username" name="username" placeholder="Username" required>

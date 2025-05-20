@@ -54,10 +54,25 @@ router.post('/login', isNotAuthenticated, async (req, res) => {
       role: user.role
     };
     
-    // Set user in session, with fallback for Vercel
+    // Set user in session, with improved fallback for Vercel
     if (req.session) {
       // Store user in session
       req.session.user = sessionUser;
+      
+      // For Vercel environment, also set a cookie with minimal auth info as backup
+      if (process.env.VERCEL === '1') {
+        // Use httpOnly false so it's available to client-side JavaScript if needed
+        res.cookie('wa_auth_backup', JSON.stringify({
+          username: user.username,
+          role: user.role,
+          exp: Date.now() + (24 * 60 * 60 * 1000) // 24h expiration
+        }), {
+          maxAge: 24 * 60 * 60 * 1000, // 24 hours
+          httpOnly: false,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax'
+        });
+      }
       
       // Log success
       logger.info(`User logged in: ${username}`);
@@ -66,20 +81,42 @@ router.post('/login', isNotAuthenticated, async (req, res) => {
       const returnTo = req.session.returnTo || '/dashboard';
       delete req.session.returnTo;
       
-      // Try forced save, but allow redirect even if it fails
+      // Try forced save with better error handling
       try {
-        req.session.save(err => {
-          if (err) {
-            logger.error(`Session save error on login: ${err.message}`);
-          }
+        if (typeof req.session.save === 'function') {
+          req.session.save(err => {
+            if (err) {
+              logger.error(`Session save error on login: ${err.message}`);
+            }
+            return res.redirect(returnTo);
+          });
+        } else {
+          logger.warn('Session save method not available, skipping save');
           return res.redirect(returnTo);
-        });
+        }
       } catch (error) {
         logger.error(`Session error during save: ${error.message}`);
         return res.redirect(returnTo);
       }
     } else {
       logger.error('No session object available for login');
+      
+      // Set fallback cookie authentication for Vercel environment
+      if (process.env.VERCEL === '1') {
+        res.cookie('wa_auth_backup', JSON.stringify({
+          username: user.username,
+          role: user.role,
+          exp: Date.now() + (24 * 60 * 60 * 1000) // 24h expiration
+        }), {
+          maxAge: 24 * 60 * 60 * 1000, // 24 hours
+          httpOnly: false,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'lax'
+        });
+        
+        logger.info('Set fallback authentication cookie for Vercel environment');
+      }
+      
       // Even without session, redirect to dashboard
       return res.redirect('/dashboard');
     }
@@ -94,17 +131,38 @@ router.post('/login', isNotAuthenticated, async (req, res) => {
  * GET /logout - Process logout
  */
 router.get('/logout', isAuthenticated, (req, res) => {
-  const username = req.session.user?.username;
+  const username = req.session?.user?.username;
   
-  req.session.destroy((err) => {
-    if (err) {
-      logger.error(`Logout error: ${err.message}`);
-      return res.redirect('/dashboard');
-    }
-    
-    logger.info(`User logged out: ${username}`);
-    res.redirect('/login');
-  });
+  // Clear user data from session first
+  if (req.session) {
+    req.session.user = null;
+  }
+  
+  // Add cookie-clearing approach for both standard session and Vercel environment
+  res.clearCookie('connect.sid');
+  res.clearCookie('whatsapp.sid');
+  res.clearCookie('wa_auth_backup');
+  
+  // Additional headers that might help with caching issues in certain browsers
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  
+  // Now destroy the session
+  if (req.session) {
+    req.session.destroy((err) => {
+      if (err) {
+        logger.error(`Logout error: ${err.message}`);
+      }
+      
+      logger.info(`User logged out: ${username}`);
+      return res.redirect('/login');
+    });
+  } else {
+    // If session object is not available (possibly Vercel serverless issue)
+    logger.info(`User logged out without session: ${username}`);
+    return res.redirect('/login');
+  }
 });
 
 /**
