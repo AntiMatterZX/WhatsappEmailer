@@ -1828,3 +1828,153 @@
 {"level":"info","message":"Redis connected successfully","service":"whatsapp-bot","timestamp":"2025-05-20 14:11:37"}
 {"level":"info","message":"Redis CONFIG SET not supported, but warnings have been suppressed","service":"whatsapp-bot","timestamp":"2025-05-20 14:11:37"}
 {"level":"info","message":"Connected to MongoDB","service":"whatsapp-bot","timestamp":"2025-05-20 14:11:38"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:11:41"}
+{"level":"info","message":"WhatsApp client restart requested by user: admin","service":"whatsapp-bot","timestamp":"2025-05-20 14:11:46"}
+{"level":"info","message":"WhatsApp client destroyed successfully for restart","service":"whatsapp-bot","timestamp":"2025-05-20 14:11:46"}
+{"code":"ERR_HTTP_INVALID_HEADER_VALUE","level":"error","message":"Error initiating new WhatsApp connection after restart: Invalid value \"undefined\" for header \"Authorization\"","service":"whatsapp-bot","stack":"TypeError [ERR_HTTP_INVALID_HEADER_VALUE]: Invalid value \"undefined\" for header \"Authorization\"\n    at ClientRequest.setHeader (node:_http_outgoing:702:3)\n    at new ClientRequest (node:_http_client:302:14)\n    at request (node:http:102:10)\n    at Timeout._onTimeout (C:\\whatsapp_bot\\src\\routes\\api-routes.js:244:28)\n    at listOnTimeout (node:internal/timers:594:17)\n    at process.processTimers (node:internal/timers:529:7)","timestamp":"2025-05-20 14:11:47"}
+{"level":"info","message":"WhatsApp client connect requested by user: admin","service":"whatsapp-bot","timestamp":"2025-05-20 14:11:49"}
+{"level":"info","message":"Created new WhatsApp client instance","service":"whatsapp-bot","timestamp":"2025-05-20 14:11:49"}
+{"level":"info","message":"Starting WhatsApp client initialization","service":"whatsapp-bot","timestamp":"2025-05-20 14:11:49"}
+{"level":"warn","message":"WhatsApp page URL unexpected:","service":"whatsapp-bot","timestamp":"2025-05-20 14:11:50"}
+{"level":"info","message":"QR Code received for WhatsApp authentication","service":"whatsapp-bot","timestamp":"2025-05-20 14:11:53"}
+{"level":"info","message":"QR code saved to app state for UI display","service":"whatsapp-bot","timestamp":"2025-05-20 14:11:53"}
+{"level":"info","message":"User logged out: admin","service":"whatsapp-bot","timestamp":"2025-05-20 14:12:16"}
+{"level":"info","message":"Received shutdown signal, closing connections...","service":"whatsapp-bot","timestamp":"2025-05-20 14:12:38"}
+{"level":"info","message":"Initialized shared Redis connection pool","service":"whatsapp-bot","timestamp":"2025-05-20 14:15:16"}
+{"level":"info","message":"Using MongoDB session store","service":"whatsapp-bot","timestamp":"2025-05-20 14:15:17"}
+{"level":"info","message":"BullMQ message queue initialized","service":"whatsapp-bot","timestamp":"2025-05-20 14:15:17"}
+{"level":"info","message":"EMAIL worker is being created and listening for EMAIL jobs","service":"whatsapp-bot","timestamp":"2025-05-20 14:15:17"}
+{"level":"info","message":"WhatsApp Bot server started on port 3000","service":"whatsapp-bot","timestamp":"2025-05-20 14:15:17"}
+{"level":"info","message":"⚡ WhatsApp Bot API is ready (development mode)  - PORT: 3000","service":"whatsapp-bot","timestamp":"2025-05-20 14:15:17"}
+{"level":"info","message":"Redis connected successfully","service":"whatsapp-bot","timestamp":"2025-05-20 14:15:17"}
+{"level":"info","message":"Redis CONFIG SET not supported, but warnings have been suppressed","service":"whatsapp-bot","timestamp":"2025-05-20 14:15:17"}
+{"level":"info","message":"Connected to MongoDB","service":"whatsapp-bot","timestamp":"2025-05-20 14:15:17"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:15:22"}
+{"level":"info","message":"Initialized shared Redis connection pool","service":"whatsapp-bot","timestamp":"2025-05-20 14:16:00"}
+{"level":"info","message":"Using MongoDB session store","service":"whatsapp-bot","timestamp":"2025-05-20 14:16:01"}
+{"level":"info","message":"BullMQ message queue initialized","service":"whatsapp-bot","timestamp":"2025-05-20 14:16:01"}
+{"level":"info","message":"EMAIL worker is being created and listening for EMAIL jobs","service":"whatsapp-bot","timestamp":"2025-05-20 14:16:01"}
+{"level":"info","message":"WhatsApp Bot server started on port 3000","service":"whatsapp-bot","timestamp":"2025-05-20 14:16:01"}
+{"level":"info","message":"⚡ WhatsApp Bot API is ready (development mode)  - PORT: 3000","service":"whatsapp-bot","timestamp":"2025-05-20 14:16:01"}
+{"level":"info","message":"Redis connected successfully","service":"whatsapp-bot","timestamp":"2025-05-20 14:16:01"}
+{"level":"info","message":"Redis CONFIG SET not supported, but warnings have been suppressed","service":"whatsapp-bot","timestamp":"2025-05-20 14:16:01"}
+{"level":"info","message":"Connected to MongoDB","service":"whatsapp-bot","timestamp":"2025-05-20 14:16:02"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:16:06"}
+{"level":"info","message":"User logged in: admin","service":"whatsapp-bot","timestamp":"2025-05-20 14:16:09"}
+{"level":"info","message":"WhatsApp client restart requested by user: admin","service":"whatsapp-bot","timestamp":"2025-05-20 14:16:17"}
+{"level":"info","message":"WhatsApp client destroyed successfully for restart","service":"whatsapp-bot","timestamp":"2025-05-20 14:16:17"}
+{"code":"ERR_HTTP_INVALID_HEADER_VALUE","level":"error","message":"Error initiating new WhatsApp connection after restart: Invalid value \"undefined\" for header \"Authorization\"","service":"whatsapp-bot","stack":"TypeError [ERR_HTTP_INVALID_HEADER_VALUE]: Invalid value \"undefined\" for header \"Authorization\"\n    at ClientRequest.setHeader (node:_http_outgoing:702:3)\n    at new ClientRequest (node:_http_client:302:14)\n    at request (node:http:102:10)\n    at Timeout._onTimeout (C:\\whatsapp_bot\\src\\routes\\api-routes.js:244:28)\n    at listOnTimeout (node:internal/timers:594:17)\n    at process.processTimers (node:internal/timers:529:7)","timestamp":"2025-05-20 14:16:18"}
+{"level":"info","message":"WhatsApp client connect requested by user: admin","service":"whatsapp-bot","timestamp":"2025-05-20 14:16:19"}
+{"level":"info","message":"Created new WhatsApp client instance","service":"whatsapp-bot","timestamp":"2025-05-20 14:16:19"}
+{"level":"info","message":"Starting WhatsApp client initialization","service":"whatsapp-bot","timestamp":"2025-05-20 14:16:19"}
+{"level":"info","message":"QR Code received for WhatsApp authentication","service":"whatsapp-bot","timestamp":"2025-05-20 14:16:23"}
+{"level":"info","message":"QR code saved to app state for UI display","service":"whatsapp-bot","timestamp":"2025-05-20 14:16:23"}
+{"level":"info","message":"Received shutdown signal, closing connections...","service":"whatsapp-bot","timestamp":"2025-05-20 14:16:36"}
+{"level":"info","message":"Initialized shared Redis connection pool","service":"whatsapp-bot","timestamp":"2025-05-20 14:26:35"}
+{"level":"info","message":"Using MongoDB session store","service":"whatsapp-bot","timestamp":"2025-05-20 14:26:36"}
+{"level":"info","message":"BullMQ message queue initialized","service":"whatsapp-bot","timestamp":"2025-05-20 14:26:36"}
+{"level":"info","message":"EMAIL worker is being created and listening for EMAIL jobs","service":"whatsapp-bot","timestamp":"2025-05-20 14:26:36"}
+{"level":"info","message":"WhatsApp Bot server started on port 3000","service":"whatsapp-bot","timestamp":"2025-05-20 14:26:36"}
+{"level":"info","message":"⚡ WhatsApp Bot API is ready (development mode)  - PORT: 3000","service":"whatsapp-bot","timestamp":"2025-05-20 14:26:36"}
+{"level":"info","message":"Redis connected successfully","service":"whatsapp-bot","timestamp":"2025-05-20 14:26:38"}
+{"level":"info","message":"Redis CONFIG SET not supported, but warnings have been suppressed","service":"whatsapp-bot","timestamp":"2025-05-20 14:26:38"}
+{"level":"info","message":"Connected to MongoDB","service":"whatsapp-bot","timestamp":"2025-05-20 14:26:47"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:26:51"}
+{"level":"info","message":"WhatsApp client restart requested by user: admin","service":"whatsapp-bot","timestamp":"2025-05-20 14:26:55"}
+{"level":"info","message":"WhatsApp client destroyed successfully for restart","service":"whatsapp-bot","timestamp":"2025-05-20 14:26:55"}
+{"code":"ERR_HTTP_INVALID_HEADER_VALUE","level":"error","message":"Error initiating new WhatsApp connection after restart: Invalid value \"undefined\" for header \"Authorization\"","service":"whatsapp-bot","stack":"TypeError [ERR_HTTP_INVALID_HEADER_VALUE]: Invalid value \"undefined\" for header \"Authorization\"\n    at ClientRequest.setHeader (node:_http_outgoing:702:3)\n    at new ClientRequest (node:_http_client:302:14)\n    at request (node:http:102:10)\n    at Timeout._onTimeout (C:\\whatsapp_bot\\src\\routes\\api-routes.js:251:28)\n    at listOnTimeout (node:internal/timers:594:17)\n    at process.processTimers (node:internal/timers:529:7)","timestamp":"2025-05-20 14:26:56"}
+{"level":"info","message":"WhatsApp client connect requested by user: admin","service":"whatsapp-bot","timestamp":"2025-05-20 14:26:59"}
+{"level":"info","message":"Ensured WhatsApp auth directory exists: .wwebjs_auth/session","service":"whatsapp-bot","timestamp":"2025-05-20 14:26:59"}
+{"level":"info","message":"Using unique session folder: session-1747731419397","service":"whatsapp-bot","timestamp":"2025-05-20 14:26:59"}
+{"level":"info","message":"Created new WhatsApp client instance","service":"whatsapp-bot","timestamp":"2025-05-20 14:26:59"}
+{"level":"info","message":"Starting WhatsApp client initialization","service":"whatsapp-bot","timestamp":"2025-05-20 14:26:59"}
+{"level":"info","message":"QR Code received for WhatsApp authentication","service":"whatsapp-bot","timestamp":"2025-05-20 14:27:05"}
+{"level":"info","message":"QR code saved to app state for UI display","service":"whatsapp-bot","timestamp":"2025-05-20 14:27:05"}
+{"level":"info","message":"WhatsApp client authenticated successfully","service":"whatsapp-bot","timestamp":"2025-05-20 14:27:49"}
+{"level":"info","message":"WhatsApp client is ready and authenticated","service":"whatsapp-bot","timestamp":"2025-05-20 14:27:50"}
+{"level":"info","message":"Received shutdown signal, closing connections...","service":"whatsapp-bot","timestamp":"2025-05-20 14:28:11"}
+{"level":"info","message":"Initialized shared Redis connection pool","service":"whatsapp-bot","timestamp":"2025-05-20 14:29:58"}
+{"level":"info","message":"Using MongoDB session store","service":"whatsapp-bot","timestamp":"2025-05-20 14:29:59"}
+{"level":"info","message":"BullMQ message queue initialized","service":"whatsapp-bot","timestamp":"2025-05-20 14:29:59"}
+{"level":"info","message":"EMAIL worker is being created and listening for EMAIL jobs","service":"whatsapp-bot","timestamp":"2025-05-20 14:29:59"}
+{"level":"info","message":"WhatsApp Bot server started on port 3000","service":"whatsapp-bot","timestamp":"2025-05-20 14:29:59"}
+{"level":"info","message":"⚡ WhatsApp Bot API is ready (development mode)  - PORT: 3000","service":"whatsapp-bot","timestamp":"2025-05-20 14:29:59"}
+{"level":"info","message":"Redis connected successfully","service":"whatsapp-bot","timestamp":"2025-05-20 14:29:59"}
+{"level":"info","message":"Redis CONFIG SET not supported, but warnings have been suppressed","service":"whatsapp-bot","timestamp":"2025-05-20 14:29:59"}
+{"level":"info","message":"Connected to MongoDB","service":"whatsapp-bot","timestamp":"2025-05-20 14:30:00"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:30:04"}
+{"level":"info","message":"WhatsApp client authenticated","service":"whatsapp-bot","timestamp":"2025-05-20 14:30:35"}
+{"level":"info","message":"WhatsApp client is ready!","service":"whatsapp-bot","timestamp":"2025-05-20 14:30:36"}
+{"level":"info","message":"Received shutdown signal, closing connections...","service":"whatsapp-bot","timestamp":"2025-05-20 14:30:58"}
+{"level":"info","message":"Initialized shared Redis connection pool","service":"whatsapp-bot","timestamp":"2025-05-20 14:31:12"}
+{"level":"info","message":"Using MongoDB session store","service":"whatsapp-bot","timestamp":"2025-05-20 14:31:13"}
+{"level":"info","message":"BullMQ message queue initialized","service":"whatsapp-bot","timestamp":"2025-05-20 14:31:13"}
+{"level":"info","message":"EMAIL worker is being created and listening for EMAIL jobs","service":"whatsapp-bot","timestamp":"2025-05-20 14:31:13"}
+{"level":"info","message":"WhatsApp Bot server started on port 3000","service":"whatsapp-bot","timestamp":"2025-05-20 14:31:13"}
+{"level":"info","message":"⚡ WhatsApp Bot API is ready (development mode)  - PORT: 3000","service":"whatsapp-bot","timestamp":"2025-05-20 14:31:13"}
+{"level":"info","message":"Redis connected successfully","service":"whatsapp-bot","timestamp":"2025-05-20 14:31:13"}
+{"level":"info","message":"Redis CONFIG SET not supported, but warnings have been suppressed","service":"whatsapp-bot","timestamp":"2025-05-20 14:31:13"}
+{"level":"info","message":"Connected to MongoDB","service":"whatsapp-bot","timestamp":"2025-05-20 14:31:14"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:31:18"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:32:18"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:32:38"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:32:58"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:33:18"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:33:38"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:34:49"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:35:49"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:36:09"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:36:29"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:36:49"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:37:09"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:38:20"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:39:20"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:39:40"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:40:00"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:40:20"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:40:40"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:41:52"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:42:52"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:43:12"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:43:32"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:43:52"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:44:12"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:45:23"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:46:23"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:46:43"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:47:03"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:47:23"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:47:43"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:48:54"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:49:54"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:50:14"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:50:34"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:50:54"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:51:14"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:52:30"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:53:30"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:53:50"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:54:10"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:54:30"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:54:50"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:55:12"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:55:16"}
+{"level":"info","message":"QR Code generated. Please scan to authenticate.","service":"whatsapp-bot","timestamp":"2025-05-20 14:56:16"}
+{"level":"info","message":"WhatsApp client authenticated","service":"whatsapp-bot","timestamp":"2025-05-20 14:56:29"}
+{"level":"info","message":"WhatsApp client is ready!","service":"whatsapp-bot","timestamp":"2025-05-20 14:56:30"}
+{"level":"info","message":"Received shutdown signal, closing connections...","service":"whatsapp-bot","timestamp":"2025-05-20 14:57:04"}
+{"level":"info","message":"Initialized shared Redis connection pool","service":"whatsapp-bot","timestamp":"2025-05-20 14:58:34"}
+{"level":"info","message":"Using MongoDB session store","service":"whatsapp-bot","timestamp":"2025-05-20 14:58:35"}
+{"level":"info","message":"BullMQ message queue initialized","service":"whatsapp-bot","timestamp":"2025-05-20 14:58:35"}
+{"level":"info","message":"EMAIL worker is being created and listening for EMAIL jobs","service":"whatsapp-bot","timestamp":"2025-05-20 14:58:35"}
+{"level":"info","message":"WhatsApp Bot server started on port 3000","service":"whatsapp-bot","timestamp":"2025-05-20 14:58:35"}
+{"level":"info","message":"⚡ WhatsApp Bot API is ready (development mode)  - PORT: 3000","service":"whatsapp-bot","timestamp":"2025-05-20 14:58:35"}
+{"level":"info","message":"Redis connected successfully","service":"whatsapp-bot","timestamp":"2025-05-20 14:58:35"}
+{"level":"info","message":"Redis CONFIG SET not supported, but warnings have been suppressed","service":"whatsapp-bot","timestamp":"2025-05-20 14:58:35"}
+{"level":"info","message":"Connected to MongoDB","service":"whatsapp-bot","timestamp":"2025-05-20 14:58:35"}
+{"level":"info","message":"WhatsApp client authenticated","service":"whatsapp-bot","timestamp":"2025-05-20 14:58:40"}
+{"level":"info","message":"WhatsApp client is ready!","service":"whatsapp-bot","timestamp":"2025-05-20 14:58:40"}
+{"level":"info","message":"Matched rule(s) [HELPDESK] for group 'Test' (school: Test) on message: '[Helpdesk] Sure?' from Varun Bhole","service":"whatsapp-bot","timestamp":"2025-05-20 15:00:21"}
+{"level":"info","message":"Sending email for group 'Test' (school: [object Object]) to varunbhole2@gmail.com for message: '[Helpdesk] Sure?'","service":"whatsapp-bot","timestamp":"2025-05-20 15:00:22"}
+{"level":"info","message":"Email sent for message: false_120363400363229279@g.us_3AFA04CBFD325272903E_919004630539@c.us, messageId: <1747733422060.false120363400363229279gus3AFA04CBFD325272903E919004630539cus@whatsapp-bot.stemrobo.com>","service":"whatsapp-bot","timestamp":"2025-05-20 15:00:23"}
+{"level":"info","message":"Received shutdown signal, closing connections...","service":"whatsapp-bot","timestamp":"2025-05-20 15:02:28"}

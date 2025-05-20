@@ -96,26 +96,25 @@ router.get('/whatsapp/status', isAuthenticated, async (req, res) => {
       info: null
     };
     
+    // Add a lastUpdated timestamp to track freshness of status
+    status.lastUpdated = new Date().toISOString();
+    
+    // Get QR code from app state if available
+    const qrCode = req.app.get('whatsappQR');
+    
     // Check if client exists
     const client = req.app.get('whatsappClient');
     if (!client) {
       logger.debug('WhatsApp status check: No client instance available');
       
-      // Still check for QR code in app state, might be being generated
-      const qrCode = req.app.get('whatsappQR');
+      // If QR code exists but no client, we're likely in QR code generation state
       if (qrCode) {
         status.qrCode = qrCode;
         status.state = 'qr_ready';
+        logger.debug('WhatsApp status: QR code available but no client');
       }
       
       return res.json(status);
-    }
-    
-    // Get QR code if available (even if client exists)
-    const qrCode = req.app.get('whatsappQR');
-    if (qrCode) {
-      status.qrCode = qrCode;
-      status.state = 'qr_ready';
     }
     
     // Get connected since timestamp if available
@@ -126,9 +125,7 @@ router.get('/whatsapp/status', isAuthenticated, async (req, res) => {
     
     // Check detailed client state
     try {
-      // WhatsApp Web client has different ways to check if it's truly connected
-      
-      // First check if authentication info exists
+      // First check if authentication info exists - this is the most reliable indicator
       if (client.info) {
         status.connected = true;
         status.state = 'connected';
@@ -140,41 +137,51 @@ router.get('/whatsapp/status', isAuthenticated, async (req, res) => {
           platform: client.info.platform || 'Unknown'
         };
         status.phone = client.info.wid.user;
+        
+        // If we're connected, we don't need the QR code anymore
+        // This ensures we don't flicker between states
+        status.qrCode = null;
+      } 
+      // If we have a QR code, prioritize showing that - fixes flickering issue
+      else if (qrCode) {
+        status.qrCode = qrCode;
+        status.state = 'qr_ready';
+        logger.debug('WhatsApp status: QR code available with client initializing');
       }
-      // Next check if we have a puppeteer page but no info yet (connecting)
+      // Otherwise check if we have a puppeteer page but no info yet (connecting)
       else if (client.pupPage) {
-        // Check if the page is still valid
-        try {
-          const url = await client.pupPage.url();
-          if (url && url.includes('web.whatsapp.com')) {
-            status.connected = false;
-            status.state = 'connecting';
-          } else {
-            logger.warn('WhatsApp page URL unexpected:', url);
-            status.state = 'error';
-          }
-        } catch (pageError) {
-          logger.warn('Error checking WhatsApp page state:', pageError.message);
+        // Check if the page is still valid without making complex async calls
+        // that might cause race conditions
+        if (client.pupBrowser && client.pupBrowser.isConnected()) {
+          status.connected = false;
+          status.state = 'connecting';
+          logger.debug('WhatsApp status: Client connecting (has pupPage)');
+        } else {
+          logger.warn('WhatsApp browser state issue - browser might be disconnected');
           status.state = 'error';
+          status.error = 'Browser connection issue';
         }
       }
       // If we have a client but no page and no info, it's likely initializing
       else {
         status.state = 'initializing';
+        logger.debug('WhatsApp status: Client initializing (no pupPage yet)');
       }
     } catch (clientError) {
       logger.warn('Error checking WhatsApp client state:', clientError.message);
       status.state = 'error';
       status.error = clientError.message;
+      
+      // If we have a client error but also a QR code, still show the QR code
+      // This helps with recovery when the client has issues but QR is available
+      if (qrCode) {
+        status.qrCode = qrCode;
+        status.state = 'qr_ready';
+        logger.debug('WhatsApp status: Error with client but QR code available, showing QR');
+      }
     }
     
-    // If there's a QR code but client says connected, prioritize client state
-    if (status.state === 'connected' && status.qrCode) {
-      // Connected takes priority over QR code
-      status.qrCode = null;
-    }
-    
-    logger.debug(`WhatsApp status check: ${status.state}`);
+    logger.debug(`WhatsApp status response: ${status.state}`);
     res.json(status);
   } catch (error) {
     logger.error('Error checking WhatsApp status:', error);
@@ -412,31 +419,60 @@ router.post('/whatsapp/connect', isAuthenticated, async (req, res) => {
     const username = req.session?.user?.username || 'unknown';
     logger.info(`WhatsApp client connect requested by user: ${username}`);
     
-    // Clear any existing client
+    // Clear any existing QR code first to avoid flickering issues
+    req.app.set('whatsappQR', null);
+    
+    // Get and properly clean up any existing client
     let currentClient = req.app.get('whatsappClient');
     if (currentClient) {
       logger.info('Destroying existing WhatsApp client before creating new one');
+      
+      // First remove the client from app state to prevent auto-reconnection
+      req.app.set('whatsappClient', null);
+      
+      // Reset connection status in app state
+      req.app.set('whatsappConnectedSince', null);
+      
       try {
+        // Try to logout first for a cleaner disconnect
+        try {
+          await currentClient.logout();
+          logger.info('Successfully logged out existing WhatsApp client');
+        } catch (logoutError) {
+          logger.warn('Failed to logout WhatsApp client, will destroy anyway:', logoutError.message);
+        }
+        
+        // Now destroy the client
         await currentClient.destroy();
+        logger.info('Successfully destroyed existing WhatsApp client');
+        
         // Help garbage collection
         currentClient = null;
       } catch (destroyError) {
         logger.error('Error destroying existing client:', destroyError);
+        // Continue despite the error - we'll create a new client anyway
       }
-      // Always null out the client in app state
-      req.app.set('whatsappClient', null);
     }
     
     // Import required modules
     const { Client, LocalAuth } = require('whatsapp-web.js');
     
-    // Reset connection status in app state
-    req.app.set('whatsappConnectedSince', null);
-    req.app.set('whatsappQR', null);
+    // Ensure session folder exists and is accessible
+    const fs = require('fs').promises;
+    const path = require('path');
+    const authPath = process.env.WHATSAPP_SESSION_PATH || './.wwebjs_auth';
+    
+    try {
+      await fs.mkdir(authPath, { recursive: true });
+      logger.info(`Ensured WhatsApp auth directory exists: ${authPath}`);
+    } catch (mkdirError) {
+      logger.warn(`Error ensuring auth directory exists: ${mkdirError.message}`);
+      // Continue anyway - the client will try to create it
+    }
     
     // Create new client with a fresh authentication session
-    const authPath = process.env.WHATSAPP_SESSION_PATH || './.wwebjs_auth';
     const sessionFolderName = 'session-' + Date.now(); // Generate unique session folder
+    logger.info(`Using unique session folder: ${sessionFolderName}`);
     
     // Define client options with care
     const clientOptions = {
@@ -458,6 +494,10 @@ router.post('/whatsapp/connect', isAuthenticated, async (req, res) => {
       },
       webVersionCache: {
         type: 'none' // Disable web version cache to avoid issues
+      },
+      // Add timeout options to help with potential connection issues
+      puppeteerOptions: {
+        timeout: 60000 // 60 seconds timeout for browser operations
       }
     };
     
@@ -522,6 +562,13 @@ router.post('/whatsapp/connect', isAuthenticated, async (req, res) => {
     // Instead, start the process and let the UI poll for the QR
     client.initialize().catch(err => {
       logger.error('Error during WhatsApp client initialization:', err);
+      
+      // If initialization fails, make sure to clear the client from app state
+      // to prevent issues with subsequent connection attempts
+      if (err) {
+        logger.warn('Clearing WhatsApp client from app state due to initialization error');
+        req.app.set('whatsappClient', null);
+      }
     });
     
     // Respond to user immediately
