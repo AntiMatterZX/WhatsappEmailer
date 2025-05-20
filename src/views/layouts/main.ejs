@@ -178,7 +178,7 @@
           </svg>
           <span class="position-absolute top-0 end-0 translate-middle badge rounded-pill bg-primary">1</span>
         </button>
-        <% if (typeof user !== 'undefined') { %>
+        <% if (typeof user !== 'undefined' && user && user.username) { %>
           <div class="project-badge project-badge-large d-flex align-items-center justify-content-center">
             <span><%= user.username.charAt(0).toUpperCase() %></span>
           </div>

@@ -1,203 +1,209 @@
 <%- contentFor('body') %>
 
-<div class="row mb-4">
-  <div class="col-12">
-    <h1 class="mb-4">Overview</h1>
-    <p class="text-secondary">Welcome, <%= user.username %>! Here's an overview of your WhatsApp Bot system.</p>
+<div class="dashboard-container p-4">
+  <div class="row mb-4">
+    <div class="col-md-12">
+      <h1 class="dashboard-title mb-3">Dashboard</h1>
+      <% if (typeof user !== 'undefined' && user && user.username) { %>
+        <p class="text-secondary">Welcome, <%= user.username %>! Here's an overview of your WhatsApp Bot system.</p>
+      <% } else { %>
+        <p class="text-secondary">Welcome to your WhatsApp Bot system overview.</p>
+      <% } %>
+    </div>
   </div>
-</div>
 
-<div class="row mb-4 g-4">
-  <div class="col-md-3">
-    <div class="card-dark h-100">
-      <div class="card-body">
-        <div class="d-flex justify-content-between mb-3">
-          <div>
-            <h5 class="card-title text-white">Active Groups</h5>
-            <p class="card-text text-secondary">Total groups being monitored</p>
-          </div>
-          <div class="stats-icon text-primary">
-            <i class="bi bi-chat-square-text"></i>
-          </div>
-        </div>
-        <p class="card-text numbers text-primary" id="activeGroups">--</p>
-      </div>
-    </div>
-  </div>
-  
-  <div class="col-md-3">
-    <div class="card-dark h-100">
-      <div class="card-body">
-        <div class="d-flex justify-content-between mb-3">
-          <div>
-            <h5 class="card-title text-white">Today's Messages</h5>
-            <p class="card-text text-secondary">Messages processed today</p>
-          </div>
-          <div class="stats-icon text-primary">
-            <i class="bi bi-chat-dots"></i>
-          </div>
-        </div>
-        <p class="card-text numbers text-primary" id="todayMessages">--</p>
-      </div>
-    </div>
-  </div>
-  
-  <div class="col-md-3">
-    <div class="card-dark h-100">
-      <div class="card-body">
-        <div class="d-flex justify-content-between mb-3">
-          <div>
-            <h5 class="card-title text-white">Emails Sent</h5>
-            <p class="card-text text-secondary">Total emails forwarded</p>
-          </div>
-          <div class="stats-icon text-primary">
-            <i class="bi bi-envelope"></i>
-          </div>
-        </div>
-        <p class="card-text numbers text-primary" id="emailsSent">--</p>
-      </div>
-    </div>
-  </div>
-  
-  <div class="col-md-3">
-    <div class="card-dark h-100">
-      <div class="card-body">
-        <div class="d-flex justify-content-between mb-3">
-          <div>
-            <h5 class="card-title text-white">System Status</h5>
-            <p class="card-text text-secondary">Overall system health</p>
-          </div>
-          <div class="stats-icon text-primary">
-            <i class="bi bi-heart-pulse"></i>
-          </div>
-        </div>
-        <p class="card-text" id="systemStatus">
-          <span class="badge bg-success">Healthy</span>
-        </p>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="row mb-4">
-  <div class="col-md-6">
-    <div class="card-dark h-100">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <div class="d-flex align-items-center">
-          <i class="bi bi-terminal me-2"></i>
-          <span>Recent Activity</span>
-        </div>
-        <div>
-          <button id="liveLogToggle" class="btn-dark-outline me-2 btn-sm">
-            <i class="bi bi-play-fill"></i> Live
-          </button>
-          <a href="/logs" class="btn-dark-outline btn-sm">
-            <i class="bi bi-arrow-right"></i>
-          </a>
-        </div>
-      </div>
-      <div class="card-body p-0">
-        <div id="recentLogs" style="height: 250px; overflow-y: auto; font-family: monospace;" class="bg-black">
-          <div id="liveBadge" class="d-none position-absolute m-2" style="right: 20px; z-index: 10;">
-            <span class="badge bg-primary pulse">LIVE</span>
-          </div>
-          <table class="terminal-log-table w-100" style="table-layout: fixed;">
-            <thead>
-              <tr>
-                <th style="width: 25%;">Time</th>
-                <th style="width: 15%;">Status</th>
-                <th style="width: 60%;">Message</th>
-              </tr>
-            </thead>
-            <tbody id="recentLogsBody">
-              <tr>
-                <td colspan="3" class="text-center py-4">
-                  <div class="spinner-border spinner-border-sm text-light" role="status">
-                    <span class="visually-hidden">Loading...</span>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  </div>
-  
-  <div class="col-md-6">
-    <div class="card-dark h-100">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <div class="d-flex align-items-center">
-          <i class="bi bi-whatsapp me-2"></i>
-          <span>WhatsApp Connection</span>
-        </div>
-        <button id="refreshConnection" class="btn-dark-outline btn-sm">
-          <i class="bi bi-arrow-clockwise me-1"></i>Refresh
-        </button>
-      </div>
-      <div class="card-body bg-black p-0">
-        <div class="p-4">
-          <div class="d-flex align-items-center mb-3">
-            <div id="statusBadge" class="status-badge status-unknown me-3">
-              <i class="bi bi-question-circle"></i>
+  <div class="row mb-4 g-4">
+    <div class="col-md-3">
+      <div class="card-dark h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between mb-3">
+            <div>
+              <h5 class="card-title text-white">Active Groups</h5>
+              <p class="card-text text-secondary">Total groups being monitored</p>
             </div>
-            <div id="statusMessage" class="fs-5">Checking WhatsApp connection status...</div>
+            <div class="stats-icon text-primary">
+              <i class="bi bi-chat-square-text"></i>
+            </div>
           </div>
-          
-          <div class="progress mb-4 bg-dark">
-            <div id="connectionProgress" class="progress-bar bg-secondary" role="progressbar" style="width: 0%"></div>
+          <p class="card-text numbers text-primary" id="activeGroups">--</p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3">
+      <div class="card-dark h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between mb-3">
+            <div>
+              <h5 class="card-title text-white">Today's Messages</h5>
+              <p class="card-text text-secondary">Messages processed today</p>
+            </div>
+            <div class="stats-icon text-primary">
+              <i class="bi bi-chat-dots"></i>
+            </div>
           </div>
-          
-          <div id="qrCode" class="d-none text-center p-3 bg-white rounded mb-3"></div>
-          
-          <div id="connectionDetails">
-            <!-- Connection details will be populated here -->
+          <p class="card-text numbers text-primary" id="todayMessages">--</p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3">
+      <div class="card-dark h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between mb-3">
+            <div>
+              <h5 class="card-title text-white">Emails Sent</h5>
+              <p class="card-text text-secondary">Total emails forwarded</p>
+            </div>
+            <div class="stats-icon text-primary">
+              <i class="bi bi-envelope"></i>
+            </div>
           </div>
-          
-          <div class="d-flex mt-3" id="connectionButtons">
-            <button class="btn-dark-outline me-3 d-none" id="disconnectBtn">
-              <i class="bi bi-x-circle me-2"></i>Disconnect
+          <p class="card-text numbers text-primary" id="emailsSent">--</p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3">
+      <div class="card-dark h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between mb-3">
+            <div>
+              <h5 class="card-title text-white">System Status</h5>
+              <p class="card-text text-secondary">Overall system health</p>
+            </div>
+            <div class="stats-icon text-primary">
+              <i class="bi bi-heart-pulse"></i>
+            </div>
+          </div>
+          <p class="card-text" id="systemStatus">
+            <span class="badge bg-success">Healthy</span>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-md-6">
+      <div class="card-dark h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center">
+            <i class="bi bi-terminal me-2"></i>
+            <span>Recent Activity</span>
+          </div>
+          <div>
+            <button id="liveLogToggle" class="btn-dark-outline me-2 btn-sm">
+              <i class="bi bi-play-fill"></i> Live
             </button>
-            <button class="btn-dark-outline me-3 d-none" id="connectBtn">
-              <i class="bi bi-qr-code me-2"></i>Connect
-            </button>
-            <button class="btn-dark-outline d-none" id="restartClient">
-              <i class="bi bi-arrow-repeat me-2"></i>Restart
-            </button>
+            <a href="/logs" class="btn-dark-outline btn-sm">
+              <i class="bi bi-arrow-right"></i>
+            </a>
+          </div>
+        </div>
+        <div class="card-body p-0">
+          <div id="recentLogs" style="height: 250px; overflow-y: auto; font-family: monospace;" class="bg-black">
+            <div id="liveBadge" class="d-none position-absolute m-2" style="right: 20px; z-index: 10;">
+              <span class="badge bg-primary pulse">LIVE</span>
+            </div>
+            <table class="terminal-log-table w-100" style="table-layout: fixed;">
+              <thead>
+                <tr>
+                  <th style="width: 25%;">Time</th>
+                  <th style="width: 15%;">Status</th>
+                  <th style="width: 60%;">Message</th>
+                </tr>
+              </thead>
+              <tbody id="recentLogsBody">
+                <tr>
+                  <td colspan="3" class="text-center py-4">
+                    <div class="spinner-border spinner-border-sm text-light" role="status">
+                      <span class="visually-hidden">Loading...</span>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-6">
+      <div class="card-dark h-100">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center">
+            <i class="bi bi-whatsapp me-2"></i>
+            <span>WhatsApp Connection</span>
+          </div>
+          <button id="refreshConnection" class="btn-dark-outline btn-sm">
+            <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+          </button>
+        </div>
+        <div class="card-body bg-black p-0">
+          <div class="p-4">
+            <div class="d-flex align-items-center mb-3">
+              <div id="statusBadge" class="status-badge status-unknown me-3">
+                <i class="bi bi-question-circle"></i>
+              </div>
+              <div id="statusMessage" class="fs-5">Checking WhatsApp connection status...</div>
+            </div>
+            
+            <div class="progress mb-4 bg-dark">
+              <div id="connectionProgress" class="progress-bar bg-secondary" role="progressbar" style="width: 0%"></div>
+            </div>
+            
+            <div id="qrCode" class="d-none text-center p-3 bg-white rounded mb-3"></div>
+            
+            <div id="connectionDetails">
+              <!-- Connection details will be populated here -->
+            </div>
+            
+            <div class="d-flex mt-3" id="connectionButtons">
+              <button class="btn-dark-outline me-3 d-none" id="disconnectBtn">
+                <i class="bi bi-x-circle me-2"></i>Disconnect
+              </button>
+              <button class="btn-dark-outline me-3 d-none" id="connectBtn">
+                <i class="bi bi-qr-code me-2"></i>Connect
+              </button>
+              <button class="btn-dark-outline d-none" id="restartClient">
+                <i class="bi bi-arrow-repeat me-2"></i>Restart
+              </button>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </div>
-</div>
 
-<div class="row">
-  <div class="col-12">
-    <div class="card-dark">
-      <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0">Quick Actions</h5>
-      </div>
-      <div class="card-body">
-        <div class="row g-3">
-          <div class="col-md-3">
-            <a href="/logs" class="btn-dark-outline d-block">
-              <i class="bi bi-list-ul me-2"></i>View Logs
-            </a>
-          </div>
-          <div class="col-md-3">
-            <a href="/metrics" class="btn-dark-outline d-block">
-              <i class="bi bi-graph-up me-2"></i>View Metrics
-            </a>
-          </div>
-          <div class="col-md-3">
-            <a href="/health" class="btn-dark-outline d-block">
-              <i class="bi bi-heart-pulse me-2"></i>Health Check
-            </a>
-          </div>
-          <div class="col-md-3">
-            <a href="#" id="clearCache" class="btn-dark-outline d-block">
-              <i class="bi bi-trash me-2"></i>Clear Cache
-            </a>
+  <div class="row">
+    <div class="col-12">
+      <div class="card-dark">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <h5 class="mb-0">Quick Actions</h5>
+        </div>
+        <div class="card-body">
+          <div class="row g-3">
+            <div class="col-md-3">
+              <a href="/logs" class="btn-dark-outline d-block">
+                <i class="bi bi-list-ul me-2"></i>View Logs
+              </a>
+            </div>
+            <div class="col-md-3">
+              <a href="/metrics" class="btn-dark-outline d-block">
+                <i class="bi bi-graph-up me-2"></i>View Metrics
+              </a>
+            </div>
+            <div class="col-md-3">
+              <a href="/health" class="btn-dark-outline d-block">
+                <i class="bi bi-heart-pulse me-2"></i>Health Check
+              </a>
+            </div>
+            <div class="col-md-3">
+              <a href="#" id="clearCache" class="btn-dark-outline d-block">
+                <i class="bi bi-trash me-2"></i>Clear Cache
+              </a>
+            </div>
           </div>
         </div>
       </div>

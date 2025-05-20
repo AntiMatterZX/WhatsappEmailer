@@ -126,7 +126,8 @@ router.post('/whatsapp/restart', isAuthenticated, async (req, res) => {
       return res.status(500).json({ error: 'WhatsApp client not found' });
     }
     
-    logger.info('WhatsApp client restart requested by user:', req.session.user.username);
+    const username = req.session?.user?.username || 'unknown';
+    logger.info(`WhatsApp client restart requested by user: ${username}`);
     
     // Destroy the old client and initialize a new one
     await client.destroy();
@@ -155,7 +156,8 @@ router.post('/whatsapp/disconnect', isAuthenticated, async (req, res) => {
       return res.status(500).json({ error: 'WhatsApp client not found' });
     }
     
-    logger.info('WhatsApp client disconnect requested by user:', req.session.user.username);
+    const username = req.session?.user?.username || 'unknown';
+    logger.info(`WhatsApp client disconnect requested by user: ${username}`);
     
     // First destroy the current client
     await client.destroy();
@@ -208,7 +210,8 @@ router.post('/whatsapp/connect', isAuthenticated, async (req, res) => {
       return res.status(500).json({ error: 'WhatsApp client not found' });
     }
     
-    logger.info('WhatsApp client connect requested by user:', req.session.user.username);
+    const username = req.session?.user?.username || 'unknown';
+    logger.info(`WhatsApp client connect requested by user: ${username}`);
     
     // Force regeneration of QR code by destroying/recreating client
     try {
@@ -245,7 +248,8 @@ router.post('/whatsapp/connect', isAuthenticated, async (req, res) => {
  */
 router.post('/cache/clear', isAuthenticated, async (req, res) => {
   try {
-    logger.info('Cache clear requested by user:', req.session.user.username);
+    const username = req.session?.user?.username || 'unknown';
+    logger.info(`Cache clear requested by user: ${username}`);
     
     // Clear your application caches here
     // This is just a placeholder - implement your actual cache clearing logic

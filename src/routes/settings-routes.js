@@ -88,7 +88,8 @@ router.post('/env', isAdmin, (req, res) => {
     // Write to .env file
     fs.writeFileSync(ENV_FILE_PATH, envContent);
     
-    logger.info(`Environment variables updated by user: ${req.session.user.username}`);
+    const username = req.session?.user?.username || 'admin';
+    logger.info(`Environment variables updated by user: ${username}`);
     
     res.json({
       success: true,
@@ -117,7 +118,8 @@ router.post('/env/setup', isAdmin, (req, res) => {
     // Write to .env file
     fs.writeFileSync(ENV_FILE_PATH, envContent);
     
-    logger.info(`Default environment variables set up by user: ${req.session.user.username}`);
+    const username = req.session?.user?.username || 'admin';
+    logger.info(`Default environment variables set up by user: ${username}`);
     
     res.json({
       success: true,
@@ -155,7 +157,8 @@ router.post('/env/reset', isAdmin, (req, res) => {
     // Write to .env file
     fs.writeFileSync(ENV_FILE_PATH, envContent);
     
-    logger.info(`Environment variables reset to defaults by user: ${req.session.user.username}`);
+    const username = req.session?.user?.username || 'admin';
+    logger.info(`Environment variables reset to defaults by user: ${username}`);
     
     res.json({
       success: true,

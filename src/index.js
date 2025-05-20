@@ -316,9 +316,12 @@ app.use('/api/settings', settingsRoutes);
 
 // WhatsApp connection control route
 app.get('/whatsapp/control', (req, res) => {
+  // Ensure user is properly checked for null/undefined
+  const user = req.session?.user || null;
+  
   res.render('whatsapp-control', { 
     title: 'WhatsApp Connection Control',
-    user: req.session.user,
+    user: user,
     activeTab: 'whatsapp-control'
   });
 });
@@ -384,14 +387,16 @@ app.get('/api/status', (req, res) => {
 // Add diagnostic endpoint for session debugging
 app.get('/debug-session', (req, res) => {
   try {
+    const userData = req.session?.user ? {
+      username: req.session.user.username || 'unknown',
+      role: req.session.user.role || 'unknown'
+    } : null;
+    
     const sessionInfo = {
       hasSession: !!req.session,
       sessionID: req.sessionID || 'none',
       hasUser: !!(req.session && req.session.user),
-      userData: req.session?.user ? {
-        username: req.session.user.username,
-        role: req.session.user.role
-      } : null,
+      userData: userData,
       cookies: req.cookies ? Object.keys(req.cookies) : [],
       env: {
         NODE_ENV: process.env.NODE_ENV || 'not-set',

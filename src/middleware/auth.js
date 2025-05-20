@@ -96,7 +96,8 @@ function hasRole(roles) {
       return next();
     }
     
-    logger.warn(`Unauthorized role access attempt by user: ${req.session.user.username}. Required: ${requiredRoles.join(', ')}, Found: ${userRole}`);
+    const username = req.session.user.username || 'unknown';
+    logger.warn(`Unauthorized role access attempt by user: ${username}. Required: ${requiredRoles.join(', ')}, Found: ${userRole}`);
     return res.status(403).render('error', { 
       error: {
         status: 403,
