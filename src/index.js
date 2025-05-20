@@ -38,6 +38,7 @@ const MessageProcessor = require('./services/messageProcessor');
 const AutomationEngine = require('./services/automationEngine');
 const metrics = require('./monitoring/prometheus');
 const logger = require('./utils/logger');
+const debugMiddleware = require('./middleware/debug');
 
 // Initialize log monitor for centralized logging
 require('./utils/logMonitor');
@@ -63,18 +64,32 @@ app.use(session({
   saveUninitialized: false,
   store: MongoStore.create({
     mongoUrl: process.env.MONGODB_URI,
-    ttl: 14 * 24 * 60 * 60,
-    autoRemove: 'native'
+    ttl: 14 * 24 * 60 * 60, // 14 days
+    autoRemove: 'native',
+    touchAfter: 24 * 3600, // time period in seconds - update session only once per 24h
+    crypto: {
+      secret: process.env.SESSION_SECRET || 'whatsapp-bot-secret' // Use same secret for consistency
+    },
+    // Error handling for mongo connection issues
+    clientPromise: mongoose.connection.asPromise().then(connection => connection.getClient()),
+    collectionName: 'sessions', // Use a dedicated collection for sessions
+    stringify: false, // Don't stringify session data (more efficient)
   }),
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    maxAge: 24 * 60 * 60 * 1000
-  }
+    sameSite: 'lax', // Prevents CSRF while allowing most cross-site requests
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  },
+  name: 'whatsapp.sid', // Custom cookie name to avoid conflicts
+  rolling: true // Reset cookie expiration on each response
 }));
 
 // Flash messages
 app.use(flash());
+
+// Add debug middleware after the session middleware
+app.use(debugMiddleware);
 
 // Create HTTP server
 const server = http.createServer(app);
@@ -224,9 +239,19 @@ client.on('message_create', async (msg) => {
 
 // Root route renders home page
 app.get('/', (req, res) => {
+  // Debug logging to trace session state
+  const hasSession = !!(req.session && req.session.user);
+  logger.debug(`Home route - SessionID: ${req.sessionID}, Has user: ${hasSession}`);
+  
+  // If the user is logged in, redirect directly to dashboard
+  if (hasSession) {
+    return res.redirect('/dashboard');
+  }
+  
+  // Otherwise render the home page with explicit user null check
   res.render('home', { 
     title: 'WhatsApp Bot Admin - Home',
-    user: req.session.user
+    user: req.session?.user || null
   });
 });
 
@@ -305,6 +330,27 @@ app.get('/api/status', (req, res) => {
     uptime: Math.floor(process.uptime()),
     memory: process.memoryUsage()
   });
+});
+
+// Add diagnostic endpoint for session debugging
+app.get('/debug-session', (req, res) => {
+  const sessionInfo = {
+    hasSession: !!req.session,
+    sessionID: req.sessionID || 'none',
+    hasUser: !!(req.session && req.session.user),
+    userData: req.session?.user ? {
+      username: req.session.user.username,
+      role: req.session.user.role
+    } : null,
+    cookies: req.cookies ? Object.keys(req.cookies) : [],
+    env: {
+      NODE_ENV: process.env.NODE_ENV,
+      VERCEL: !!process.env.VERCEL,
+      VERCEL_ENV: process.env.VERCEL_ENV || 'not-set'
+    }
+  };
+  
+  res.json(sessionInfo);
 });
 
 // Error handling middleware

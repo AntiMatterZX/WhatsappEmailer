@@ -10,14 +10,33 @@ const logger = require('../utils/logger');
  * Redirects to login page if not authenticated
  */
 function isAuthenticated(req, res, next) {
-  if (req.session && req.session.user) {
+  // If there's no session object at all, we definitely need to redirect
+  if (!req.session) {
+    logger.error('No session object found in request - possible session store connection issue');
+    req.flash('error', 'Session error: Please try logging in again');
+    return res.redirect('/login');
+  }
+  
+  // Debug logging for session troubleshooting
+  logger.debug(`Auth check - SessionID: ${req.sessionID}, Has user: ${!!req.session.user}`);
+  
+  if (req.session.user) {
+    // Session exists and has user object
     return next();
   }
   
   // Store the requested URL to redirect after login
   req.session.returnTo = req.originalUrl;
-  req.flash('error', 'Please login to access this page');
-  return res.redirect('/login');
+  
+  // Force session save to ensure returnTo is persisted
+  req.session.save((err) => {
+    if (err) {
+      logger.error(`Session save error in auth middleware: ${err.message}`);
+    }
+    
+    req.flash('error', 'Please login to access this page');
+    return res.redirect('/login');
+  });
 }
 
 /**

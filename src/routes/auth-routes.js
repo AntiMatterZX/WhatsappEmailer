@@ -46,21 +46,33 @@ router.post('/login', isNotAuthenticated, async (req, res) => {
     user.lastLogin = new Date();
     await user.save();
     
-    // Set user session
-    req.session.user = {
-      id: user._id,
+    // Create a simplified user object for session storage
+    const sessionUser = {
+      id: user._id.toString(), // Ensure ID is a string
       username: user.username,
       email: user.email,
       role: user.role
     };
     
-    logger.info(`User logged in: ${username}`);
+    // Set user session with forceful save to ensure persistence in serverless environment
+    req.session.user = sessionUser;
     
-    // Redirect to original requested page or default to dashboard
-    const returnTo = req.session.returnTo || '/dashboard';
-    delete req.session.returnTo;
-    
-    res.redirect(returnTo);
+    // Force session save before redirect
+    req.session.save((err) => {
+      if (err) {
+        logger.error(`Session save error: ${err.message}`);
+        req.flash('error', 'Login error: Session could not be saved');
+        return res.redirect('/login');
+      }
+      
+      logger.info(`User logged in: ${username}, SessionID: ${req.sessionID}`);
+      
+      // Redirect to original requested page or default to dashboard
+      const returnTo = req.session.returnTo || '/dashboard';
+      delete req.session.returnTo;
+      
+      return res.redirect(returnTo);
+    });
   } catch (error) {
     logger.error(`Login error: ${error.message}`);
     req.flash('error', 'An error occurred during login');
