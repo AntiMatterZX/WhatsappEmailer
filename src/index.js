@@ -24,6 +24,7 @@ const session = require('express-session');
 const flash = require('connect-flash');
 const cookieParser = require('cookie-parser');
 const expressLayouts = require('express-ejs-layouts');
+const MongoStore = require('connect-mongo');
 
 // Application modules
 const { setupMessageQueue } = require('./queues/messageQueue');
@@ -60,9 +61,15 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'whatsapp-bot-secret',
   resave: false,
   saveUninitialized: false,
-  cookie: { 
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGODB_URI,
+    ttl: 14 * 24 * 60 * 60,
+    autoRemove: 'native'
+  }),
+  cookie: {
     secure: process.env.NODE_ENV === 'production',
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000
   }
 }));
 

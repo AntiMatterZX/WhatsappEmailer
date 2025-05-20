@@ -1683,3 +1683,25 @@
 {"level":"info","message":"Redis CONFIG SET not supported, but warnings have been suppressed","service":"whatsapp-bot","timestamp":"2025-05-20 03:52:31"}
 {"level":"info","message":"Connected to MongoDB","service":"whatsapp-bot","timestamp":"2025-05-20 03:52:31"}
 {"level":"info","message":"Received shutdown signal, closing connections...","service":"whatsapp-bot","timestamp":"2025-05-20 03:52:38"}
+{"level":"info","message":"BullMQ message queue initialized","service":"whatsapp-bot","timestamp":"2025-05-20 12:11:09"}
+{"level":"info","message":"EMAIL worker is being created and listening for EMAIL jobs","service":"whatsapp-bot","timestamp":"2025-05-20 12:11:09"}
+{"level":"info","message":"WhatsApp Bot server started on port 3000","service":"whatsapp-bot","timestamp":"2025-05-20 12:11:09"}
+{"level":"info","message":"⚡ WhatsApp Bot API is ready (development mode)  - PORT: 3000","service":"whatsapp-bot","timestamp":"2025-05-20 12:11:09"}
+{"level":"info","message":"Redis connected successfully","service":"whatsapp-bot","timestamp":"2025-05-20 12:11:09"}
+{"level":"info","message":"Redis CONFIG SET not supported, but warnings have been suppressed","service":"whatsapp-bot","timestamp":"2025-05-20 12:11:09"}
+{"level":"info","message":"Connected to MongoDB","service":"whatsapp-bot","timestamp":"2025-05-20 12:11:09"}
+{"level":"info","message":"WhatsApp client authenticated","service":"whatsapp-bot","timestamp":"2025-05-20 12:11:18"}
+{"level":"info","message":"WhatsApp client is ready!","service":"whatsapp-bot","timestamp":"2025-05-20 12:11:19"}
+{"level":"info","message":"Matched rule(s) [HELPDESK] for group 'Test' (school: Test) on message: '[Helpdesk] Sure?' from Varun Bhole","service":"whatsapp-bot","timestamp":"2025-05-20 12:11:27"}
+{"level":"info","message":"Sending email for group 'Test' (school: [object Object]) to varunbhole2@gmail.com for message: '[Helpdesk] Sure?'","service":"whatsapp-bot","timestamp":"2025-05-20 12:11:27"}
+{"level":"info","message":"Email sent for message: false_120363400363229279@g.us_3ADB582F404BEB75B764_919004630539@c.us, messageId: <1747723287266.false120363400363229279gus3ADB582F404BEB75B764919004630539cus@whatsapp-bot.stemrobo.com>","service":"whatsapp-bot","timestamp":"2025-05-20 12:11:29"}
+{"level":"info","message":"User logged in: admin","service":"whatsapp-bot","timestamp":"2025-05-20 12:11:40"}
+{"level":"info","message":"Received shutdown signal, closing connections...","service":"whatsapp-bot","timestamp":"2025-05-20 12:30:14"}
+{"level":"info","message":"BullMQ message queue initialized","service":"whatsapp-bot","timestamp":"2025-05-20 12:30:18"}
+{"level":"info","message":"EMAIL worker is being created and listening for EMAIL jobs","service":"whatsapp-bot","timestamp":"2025-05-20 12:30:18"}
+{"level":"info","message":"WhatsApp Bot server started on port 3000","service":"whatsapp-bot","timestamp":"2025-05-20 12:30:18"}
+{"level":"info","message":"⚡ WhatsApp Bot API is ready (development mode)  - PORT: 3000","service":"whatsapp-bot","timestamp":"2025-05-20 12:30:18"}
+{"level":"info","message":"Redis connected successfully","service":"whatsapp-bot","timestamp":"2025-05-20 12:30:18"}
+{"level":"info","message":"Redis CONFIG SET not supported, but warnings have been suppressed","service":"whatsapp-bot","timestamp":"2025-05-20 12:30:18"}
+{"level":"info","message":"Connected to MongoDB","service":"whatsapp-bot","timestamp":"2025-05-20 12:30:19"}
+{"level":"info","message":"Received shutdown signal, closing connections...","service":"whatsapp-bot","timestamp":"2025-05-20 12:30:21"}
