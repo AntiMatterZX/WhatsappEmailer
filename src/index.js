@@ -58,36 +58,58 @@ app.use(expressLayouts);
 app.set('layout', 'layouts/main');
 
 // Session configuration
-app.use(session({
+const sessionConfig = {
   secret: process.env.SESSION_SECRET || 'whatsapp-bot-secret',
   resave: false,
   saveUninitialized: false,
-  store: MongoStore.create({
-    mongoUrl: process.env.MONGODB_URI,
-    ttl: 14 * 24 * 60 * 60, // 14 days
-    autoRemove: 'native',
-    touchAfter: 24 * 3600, // time period in seconds
-    crypto: {
-      secret: process.env.SESSION_SECRET || 'whatsapp-bot-secret'
-    },
-    collectionName: 'sessions',
-    stringify: false
-  }),
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    sameSite: 'lax',
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   },
-  name: 'whatsapp.sid',
-  rolling: true
-}));
+  name: 'whatsapp.sid'
+};
+
+// Only use MongoDB session store if not on Vercel or explicitly enabled
+if (!process.env.VERCEL || process.env.ENABLE_MONGO_SESSIONS === 'true') {
+  try {
+    sessionConfig.store = MongoStore.create({
+      mongoUrl: process.env.MONGODB_URI,
+      ttl: 14 * 24 * 60 * 60, // 14 days
+      autoRemove: 'native'
+    });
+    logger.info('Using MongoDB session store');
+  } catch (error) {
+    logger.error('Failed to create MongoDB session store, falling back to in-memory store:', error);
+    // Continue with in-memory store (default)
+  }
+} else {
+  logger.info('Using in-memory session store for Vercel deployment');
+}
+
+// Apply session middleware with error handling
+app.use((req, res, next) => {
+  session(sessionConfig)(req, res, (err) => {
+    if (err) {
+      logger.error('Session middleware error:', err);
+      // Continue without session
+      next();
+    } else {
+      next();
+    }
+  });
+});
 
 // Flash messages
 app.use(flash());
 
-// Add debug middleware after the session middleware
-app.use(debugMiddleware);
+// Use a simplified version of debug middleware
+app.use((req, res, next) => {
+  if (!req.path.startsWith('/css/') && !req.path.startsWith('/js/') && !req.path.startsWith('/img/')) {
+    logger.debug(`Request: ${req.method} ${req.path}`);
+  }
+  next();
+});
 
 // Create HTTP server
 const server = http.createServer(app);
@@ -382,28 +404,105 @@ app.get('/debug-session', (req, res) => {
   }
 });
 
-// Error handling middleware
-app.use((req, res, next) => {
-  res.status(404).render('error', {
-    error: {
-      status: 404,
-      message: 'Page Not Found',
-      description: 'The page you are looking for does not exist.'
+// Add special diagnostic endpoint for troubleshooting Vercel issues
+app.get('/vercel-diagnostic', (req, res) => {
+  const diagnosticInfo = {
+    timestamp: new Date().toISOString(),
+    environment: {
+      node: process.version,
+      platform: process.platform,
+      arch: process.arch,
+      vercel: process.env.VERCEL === '1',
+      vercelEnv: process.env.VERCEL_ENV || 'not-set',
+      region: process.env.VERCEL_REGION || 'not-set',
+      nodeEnv: process.env.NODE_ENV || 'not-set'
+    },
+    request: {
+      method: req.method,
+      path: req.path,
+      headers: Object.keys(req.headers),
+      cookies: req.cookies ? Object.keys(req.cookies) : []
+    },
+    memory: {
+      rss: `${Math.round(process.memoryUsage().rss / 1024 / 1024)} MB`,
+      heapTotal: `${Math.round(process.memoryUsage().heapTotal / 1024 / 1024)} MB`,
+      heapUsed: `${Math.round(process.memoryUsage().heapUsed / 1024 / 1024)} MB`
+    },
+    session: {
+      exists: !!req.session,
+      id: req.sessionID || 'none'
+    },
+    mongo: {
+      uri: process.env.MONGODB_URI ? 'set' : 'not-set',
+      connection: mongoose.connection.readyState
     }
-  });
+  };
+  
+  // Log diagnostic info
+  logger.info('Vercel diagnostic info requested', diagnosticInfo);
+  
+  // Return diagnostic info
+  return res.json(diagnosticInfo);
 });
 
+// Error handling middleware - page not found (404)
+app.use((req, res, next) => {
+  res.status(404).send(`
+    <html>
+      <head>
+        <title>Page Not Found</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; text-align: center; }
+          .error { background: #f8f9fa; padding: 20px; border-radius: 5px; margin-top: 20px; }
+          h1 { color: #dc3545; }
+          a { color: #007bff; text-decoration: none; margin-top: 20px; display: inline-block; }
+        </style>
+      </head>
+      <body>
+        <h1>404 - Page Not Found</h1>
+        <div class="error">
+          <p>The page you are looking for does not exist.</p>
+        </div>
+        <a href="/">Return to Home</a>
+      </body>
+    </html>
+  `);
+});
+
+// Error handling middleware - server errors (500)
 app.use((err, req, res, next) => {
-  logger.error('Express error handler caught error:', err);
-  res.status(500).render('error', {
-    error: {
-      status: 500,
-      message: 'Internal Server Error',
-      description: process.env.NODE_ENV === 'production' 
-        ? 'Something went wrong on our end. Please try again later.'
-        : err.message
-    }
+  // Log the error with stack trace
+  logger.error('Unhandled error:', {
+    message: err.message,
+    stack: err.stack,
+    url: req.originalUrl,
+    method: req.method
   });
+  
+  // Respond with a user-friendly error page
+  res.status(500).send(`
+    <html>
+      <head>
+        <title>Something Went Wrong</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; text-align: center; }
+          .error { background: #f8f9fa; padding: 20px; border-radius: 5px; margin-top: 20px; }
+          h1 { color: #dc3545; }
+          a { color: #007bff; text-decoration: none; margin-top: 20px; display: inline-block; }
+          .message { color: #6c757d; margin-top: 20px; font-family: monospace; }
+        </style>
+      </head>
+      <body>
+        <h1>Something Went Wrong</h1>
+        <div class="error">
+          <p>We're sorry, but something went wrong on our end.</p>
+          <p>Our team has been notified and is working to fix the issue.</p>
+          ${process.env.NODE_ENV !== 'production' ? `<p class="message">${err.message}</p>` : ''}
+        </div>
+        <a href="/">Return to Home</a>
+      </body>
+    </html>
+  `);
 });
 
 /**

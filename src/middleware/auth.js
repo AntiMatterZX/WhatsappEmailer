@@ -10,33 +10,43 @@ const logger = require('../utils/logger');
  * Redirects to login page if not authenticated
  */
 function isAuthenticated(req, res, next) {
-  // If there's no session object at all, we definitely need to redirect
-  if (!req.session) {
-    logger.error('No session object found in request - possible session store connection issue');
-    req.flash('error', 'Session error: Please try logging in again');
-    return res.redirect('/login');
-  }
-  
-  // Debug logging for session troubleshooting
-  logger.debug(`Auth check - SessionID: ${req.sessionID}, Has user: ${!!req.session.user}`);
-  
-  if (req.session.user) {
-    // Session exists and has user object
+  // First check for session authentication
+  if (req.session && req.session.user) {
     return next();
   }
   
-  // Store the requested URL to redirect after login
-  req.session.returnTo = req.originalUrl;
-  
-  // Force session save to ensure returnTo is persisted
-  req.session.save((err) => {
-    if (err) {
-      logger.error(`Session save error in auth middleware: ${err.message}`);
+  // Vercel compatibility - check for authorization header as fallback
+  // This could be used with a token-based approach if sessions fail
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith('Basic ')) {
+    try {
+      // Basic auth header (for emergency access if session store fails)
+      const base64Credentials = authHeader.split(' ')[1];
+      const credentials = Buffer.from(base64Credentials, 'base64').toString('ascii');
+      const [username, password] = credentials.split(':');
+      
+      // Emergency access with admin credentials
+      // This is basic, but a fallback if session store is failing
+      if (username === process.env.ADMIN_USERNAME && 
+          password === process.env.ADMIN_PASSWORD) {
+        logger.warn(`Emergency admin access via Basic Auth for ${username}`);
+        
+        // Continue to protected route
+        return next();
+      }
+    } catch (error) {
+      logger.error('Auth header processing error:', error.message);
     }
-    
-    req.flash('error', 'Please login to access this page');
-    return res.redirect('/login');
-  });
+  }
+  
+  // Store original URL
+  if (req.session) {
+    req.session.returnTo = req.originalUrl;
+  }
+  
+  // Not authenticated, redirect to login
+  req.flash('error', 'Please login to access this page');
+  return res.redirect('/login');
 }
 
 /**
